@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npx sv:*)",
       "Bash(echo:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "WebFetch(domain:better-auth.com)",
+      "Bash(mkdir:*)",
+      "mcp__svelte__svelte-autofixer",
+      "Bash(cd:*)",
+      "Bash(npm view:*)"
     ]
   }
 }

@@ -1,6 +1,26 @@
 services:
+  app:
+    build: .
+    ports:
+      - 3000:3000
+    environment:
+      DATABASE_URL: "postgres://root:mysecretpassword@db:5432/local"
+      ORIGIN: "http://localhost:3000"
+      BETTER_AUTH_SECRET: "5f7d2ec2-c024-4bf8-8458-0e479f0503ee"
+      LIVEKIT_URL: "ws://livekit:7880"
+      LIVEKIT_API_KEY: "devkey"
+      LIVEKIT_API_SECRET: "secret1234567890secret1234567890"
+      SEAWEEDFS_FILER_URL: "http://seaweedfs:8888"
+    depends_on:
+      db:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+      livekit:
+        condition: service_started
+
   db:
-    image: postgres
+    image: postgres:16-alpine
     restart: always
     ports:
       - 5432:5432
@@ -9,6 +29,39 @@ services:
       POSTGRES_PASSWORD: mysecretpassword
       POSTGRES_DB: local
     volumes:
-      - pgdata:/var/lib/postgresql
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  seaweedfs:
+    image: chrislusf/seaweedfs
+    command: "server -s3 -dir=/data -master.volumeSizeLimitMB=100"
+    ports:
+      - 9333:9333   # Master
+      - 8080:8080   # Volume
+      - 8888:8888   # Filer
+      - 8333:8333   # S3
+    volumes:
+      - seaweedfs_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9333/cluster/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  livekit:
+    image: livekit/livekit-server
+    command: --config /etc/livekit.yaml
+    ports:
+      - 7880:7880   # HTTP / WebSocket
+      - 7881:7881   # RTC (TCP)
+      - 7882:7882/udp # RTC (UDP)
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+
 volumes:
   pgdata:
+  seaweedfs_data:
