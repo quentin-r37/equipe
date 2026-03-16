@@ -107,4 +107,10 @@
 		align-items: center;
 		margin-right: var(--cds-spacing-03);
 	}
+
+	@media (max-width: 672px) {
+		:global(.bx--content) {
+			padding: 0;
+		}
+	}
 </style>
