@@ -15,7 +15,8 @@
       "WebFetch(domain:svelte.carbondesignsystem.com)",
       "Bash(npx svelte-check:*)",
       "Bash(grep:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(ls:*)"
     ]
   }
 }

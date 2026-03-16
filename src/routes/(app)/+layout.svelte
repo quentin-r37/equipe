@@ -19,6 +19,7 @@
 	import DocumentMultiple01 from 'carbon-icons-svelte/lib/DocumentMultiple_01.svelte';
 	import Logout from 'carbon-icons-svelte/lib/Logout.svelte';
 	import UserAvatar from 'carbon-icons-svelte/lib/UserAvatar.svelte';
+	import Settings from 'carbon-icons-svelte/lib/Settings.svelte';
 	import type { LayoutServerData } from './$types';
 
 	let { data, children }: { data: LayoutServerData; children: any } = $props();
@@ -72,6 +73,15 @@
 			href="/files"
 			isSelected={pathname.startsWith('/files')}
 		/>
+		{#if data.isAdmin}
+			<SideNavDivider />
+			<SideNavLink
+				icon={Settings}
+				text="Admin – Users"
+				href="/admin/users"
+				isSelected={pathname.startsWith('/admin')}
+			/>
+		{/if}
 	</SideNavItems>
 </SideNav>
 

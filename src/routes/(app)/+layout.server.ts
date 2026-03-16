@@ -3,6 +3,7 @@ import type { LayoutServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { team, teamMember, channel } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import { isAdmin } from '$lib/server/admin';
 
 export const load: LayoutServerLoad = async (event) => {
 	if (!event.locals.user) throw redirect(302, '/login');
@@ -30,6 +31,7 @@ export const load: LayoutServerLoad = async (event) => {
 
 	return {
 		user: event.locals.user,
+		isAdmin: isAdmin(event.locals.user.email),
 		teams,
 		channels
 	};
