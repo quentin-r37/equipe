@@ -55,7 +55,8 @@
 
 	@media (max-width: 672px) {
 		.channel-layout {
-			height: 100%;
+			height: calc(100vh - 3rem);
+			margin: calc(-1 * var(--cds-spacing-04));
 		}
 
 		.channel-header {
