@@ -7,6 +7,7 @@
 		Tile,
 		InlineNotification
 	} from 'carbon-components-svelte';
+	import Logo from '$lib/components/Logo.svelte';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
@@ -16,6 +17,10 @@
 
 <div class="login-container">
 	<div class="login-card">
+		<div class="login-branding">
+			<Logo size={48} />
+			<h1>Equipe</h1>
+		</div>
 		<Tile>
 			<h2>{mode === 'login' ? 'Sign In' : 'Create Account'}</h2>
 
@@ -85,6 +90,21 @@
 	.login-card {
 		width: 100%;
 		max-width: 28rem;
+	}
+
+	.login-branding {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--cds-spacing-03);
+		margin-bottom: var(--cds-spacing-06);
+		color: var(--cds-text-primary);
+	}
+
+	.login-branding h1 {
+		font-size: 1.75rem;
+		font-weight: 600;
+		margin: 0;
 	}
 
 	h2 {

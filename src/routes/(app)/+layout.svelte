@@ -20,6 +20,7 @@
 	import Logout from 'carbon-icons-svelte/lib/Logout.svelte';
 	import UserAvatar from 'carbon-icons-svelte/lib/UserAvatar.svelte';
 	import Settings from 'carbon-icons-svelte/lib/Settings.svelte';
+	import Logo from '$lib/components/Logo.svelte';
 	import type { LayoutServerData } from './$types';
 
 	let { data, children }: { data: LayoutServerData; children: any } = $props();
@@ -29,7 +30,11 @@
 	const pathname = $derived(page.url.pathname);
 </script>
 
-<Header bind:isSideNavOpen href="/" companyName="Equipe">
+<Header bind:isSideNavOpen href="/">
+	<svelte:fragment slot="platform">
+		<span class="header-logo"><Logo size={20} /></span>
+		Equipe
+	</svelte:fragment>
 	<HeaderUtilities>
 		<HeaderGlobalAction aria-label={data.user.name} icon={UserAvatar} />
 		<HeaderGlobalAction
@@ -90,3 +95,11 @@
 <Content>
 	{@render children()}
 </Content>
+
+<style>
+	.header-logo {
+		display: inline-flex;
+		align-items: center;
+		margin-right: var(--cds-spacing-03);
+	}
+</style>
