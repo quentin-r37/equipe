@@ -111,6 +111,8 @@
 	@media (max-width: 672px) {
 		:global(.bx--content) {
 			padding: 0;
+			height: calc(100vh - 3rem);
+			overflow: hidden;
 		}
 	}
 </style>

@@ -53,6 +53,20 @@
 		height: calc(100vh - 7rem);
 	}
 
+	@media (max-width: 672px) {
+		.channel-layout {
+			height: 100%;
+		}
+
+		.channel-header {
+			padding: var(--cds-spacing-04) var(--cds-spacing-04);
+		}
+
+		.tab-bar {
+			padding: 0 var(--cds-spacing-04);
+		}
+	}
+
 	.channel-header {
 		padding: var(--cds-spacing-05) var(--cds-spacing-06);
 		border-bottom: 1px solid var(--cds-border-subtle);
