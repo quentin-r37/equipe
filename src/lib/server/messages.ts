@@ -3,6 +3,13 @@ import { EventEmitter } from 'events';
 const emitter = new EventEmitter();
 emitter.setMaxListeners(0);
 
+export interface ChatFile {
+	id: string;
+	name: string;
+	size: number;
+	mimeType: string;
+}
+
 export interface ChatMessage {
 	id: string;
 	channelId: string;
@@ -10,6 +17,7 @@ export interface ChatMessage {
 	userName: string;
 	content: string;
 	createdAt: string;
+	files?: ChatFile[];
 }
 
 export const messageBus = {

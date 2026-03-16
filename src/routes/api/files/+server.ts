@@ -17,10 +17,15 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const response = await downloadFile(fileRecord.storagePath);
 	const blob = await response.blob();
 
+	const inline = url.searchParams.get('inline') === '1';
+	const disposition = inline
+		? `inline; filename="${fileRecord.name}"`
+		: `attachment; filename="${fileRecord.name}"`;
+
 	return new Response(blob, {
 		headers: {
 			'Content-Type': fileRecord.mimeType,
-			'Content-Disposition': `attachment; filename="${fileRecord.name}"`,
+			'Content-Disposition': disposition,
 			'Content-Length': String(fileRecord.size)
 		}
 	});

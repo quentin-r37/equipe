@@ -81,6 +81,7 @@ export const file = pgTable('file', {
 		.notNull()
 		.references(() => team.id, { onDelete: 'cascade' }),
 	channelId: text('channel_id').references(() => channel.id, { onDelete: 'set null' }),
+	messageId: text('message_id').references(() => message.id, { onDelete: 'set null' }),
 	userId: text('user_id').notNull(),
 	userName: text('user_name').notNull(),
 	name: text('name').notNull(),
