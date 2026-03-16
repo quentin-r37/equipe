@@ -2,7 +2,7 @@ import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
-import { team, teamMember, channel, meeting, file, message } from '$lib/server/db/schema';
+import { team, teamMember, channel, meeting, file, message, user } from '$lib/server/db/schema';
 import { eq, and, inArray, desc, count } from 'drizzle-orm';
 import { deleteFile } from '$lib/server/seaweedfs';
 
@@ -200,6 +200,56 @@ export const actions: Actions = {
 		}
 
 		await db.delete(channel).where(eq(channel.id, channelId));
+
+		return { success: true };
+	},
+	addMember: async (event) => {
+		if (!event.locals.user) throw redirect(302, '/login');
+
+		const formData = await event.request.formData();
+		const teamId = formData.get('teamId')?.toString() ?? '';
+		const email = formData.get('email')?.toString()?.trim().toLowerCase() ?? '';
+
+		if (!teamId || !email) return fail(400, { addMemberError: 'Team and email are required' });
+
+		// Verify the current user is owner or admin of the team
+		const [membership] = await db
+			.select()
+			.from(teamMember)
+			.where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, event.locals.user.id)))
+			.limit(1);
+
+		if (!membership || membership.role === 'member') {
+			return fail(403, { addMemberError: 'Only team owners and admins can add members' });
+		}
+
+		// Find user by email
+		const [targetUser] = await db
+			.select({ id: user.id })
+			.from(user)
+			.where(eq(user.email, email))
+			.limit(1);
+
+		if (!targetUser) {
+			return fail(404, { addMemberError: 'No user found with this email' });
+		}
+
+		// Check if already a member
+		const [existing] = await db
+			.select()
+			.from(teamMember)
+			.where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, targetUser.id)))
+			.limit(1);
+
+		if (existing) {
+			return fail(409, { addMemberError: 'This user is already a member of the team' });
+		}
+
+		await db.insert(teamMember).values({
+			teamId,
+			userId: targetUser.id,
+			role: 'member'
+		});
 
 		return { success: true };
 	}

@@ -16,6 +16,7 @@
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import Group from 'carbon-icons-svelte/lib/Group.svelte';
+	import UserFollow from 'carbon-icons-svelte/lib/UserFollow.svelte';
 	import Chat from 'carbon-icons-svelte/lib/Chat.svelte';
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
 	import DocumentMultiple01 from 'carbon-icons-svelte/lib/DocumentMultiple_01.svelte';
@@ -27,6 +28,8 @@
 
 	let showTeamModal = $state(false);
 	let showChannelModal = $state(false);
+	let showAddMemberModal = $state(false);
+	let addMemberTeamId = $state('');
 
 	// Delete confirmation state
 	let deleteTarget = $state<{ type: 'team' | 'channel'; id: string; name: string } | null>(null);
@@ -35,6 +38,11 @@
 	function confirmDelete(type: 'team' | 'channel', id: string, name: string) {
 		deleteTarget = { type, id, name };
 		showDeleteConfirm = true;
+	}
+
+	function openAddMember(teamId: string) {
+		addMemberTeamId = teamId;
+		showAddMemberModal = true;
 	}
 
 	// Group channels by team
@@ -158,7 +166,7 @@
 						<Tile class="team-card">
 							<div class="team-header">
 								<div class="team-info">
-									<h4 class="team-name">{t.name}</h4>
+									<h4 class="team-name"><a href="/teams/{t.id}">{t.name}</a></h4>
 									<div class="team-meta">
 										<Tag size="sm" type="cool-gray">
 											{t.memberCount}
@@ -170,6 +178,14 @@
 										</Tag>
 									</div>
 								</div>
+								<div class="team-actions">
+								<Button
+									size="small"
+									kind="ghost"
+									icon={UserFollow}
+									iconDescription="Add member"
+									on:click={() => openAddMember(t.id)}
+								/>
 								<Button
 									size="small"
 									kind="danger-ghost"
@@ -177,6 +193,7 @@
 									iconDescription="Delete team"
 									on:click={() => confirmDelete('team', t.id, t.name)}
 								/>
+							</div>
 							</div>
 							{#if t.description}
 								<p class="team-description">{t.description}</p>
@@ -365,6 +382,31 @@
 	</form>
 </Modal>
 
+<!-- Add Member modal -->
+<Modal
+	bind:open={showAddMemberModal}
+	modalHeading="Add Member"
+	primaryButtonText="Add"
+	secondaryButtonText="Cancel"
+	on:click:button--secondary={() => (showAddMemberModal = false)}
+	on:submit={() => {
+		const form = document.getElementById('add-member-form') as HTMLFormElement;
+		form?.requestSubmit();
+		showAddMemberModal = false;
+	}}
+>
+	<form id="add-member-form" method="post" action="?/addMember" use:enhance>
+		<input type="hidden" name="teamId" value={addMemberTeamId} />
+		<TextInput
+			name="email"
+			labelText="User email"
+			placeholder="colleague@example.com"
+			required
+			type="email"
+		/>
+	</form>
+</Modal>
+
 <style>
 	.page-header {
 		margin-bottom: var(--cds-spacing-07);
@@ -441,9 +483,23 @@
 		gap: var(--cds-spacing-03);
 	}
 
+	.team-actions {
+		display: flex;
+		gap: var(--cds-spacing-01);
+	}
+
 	.team-name {
 		margin: 0;
 		font-size: 1rem;
+	}
+
+	.team-name a {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.team-name a:hover {
+		color: var(--cds-link-primary);
 	}
 
 	.team-meta {

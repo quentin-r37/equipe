@@ -64,6 +64,11 @@
 							isSelected={pathname === `/channels/${ch.id}`}
 						/>
 					{/each}
+					<SideNavMenuItem
+						href="/teams/{t.id}"
+						text="Team settings"
+						isSelected={pathname === `/teams/${t.id}`}
+					/>
 				</SideNavMenu>
 			{/each}
 			<SideNavDivider />

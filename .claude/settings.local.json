@@ -17,7 +17,10 @@
       "Bash(grep:*)",
       "Bash(npm run:*)",
       "Bash(ls:*)",
-      "Bash(npx prettier:*)"
+      "Bash(npx prettier:*)",
+      "mcp__claude_ai_Context7__resolve-library-id",
+      "WebFetch(domain:www.better-auth.com)",
+      "WebFetch(domain:developers.brevo.com)"
     ]
   }
 }
