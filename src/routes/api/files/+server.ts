@@ -2,7 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { downloadFile, deleteFile as deleteStorageFile } from '$lib/server/seaweedfs';
 import { db } from '$lib/server/db';
-import { file, message } from '$lib/server/db/schema';
+import { file, message, teamMember } from '$lib/server/db/schema';
 import { eq, and, ne } from 'drizzle-orm';
 import { messageBus } from '$lib/server/messages';
 
@@ -14,6 +14,14 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 	const [fileRecord] = await db.select().from(file).where(eq(file.id, fileId)).limit(1);
 	if (!fileRecord) throw error(404, 'File not found');
+
+	// Verify user is a member of the file's team
+	const [membership] = await db
+		.select()
+		.from(teamMember)
+		.where(and(eq(teamMember.teamId, fileRecord.teamId), eq(teamMember.userId, locals.user.id)))
+		.limit(1);
+	if (!membership) throw error(403, 'Not a member of this team');
 
 	const response = await downloadFile(fileRecord.storagePath);
 	const blob = await response.blob();
@@ -40,6 +48,15 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
 
 	const [fileRecord] = await db.select().from(file).where(eq(file.id, fileId)).limit(1);
 	if (!fileRecord) throw error(404, 'File not found');
+
+	// Verify user is a member of the file's team
+	const [membership] = await db
+		.select()
+		.from(teamMember)
+		.where(and(eq(teamMember.teamId, fileRecord.teamId), eq(teamMember.userId, locals.user.id)))
+		.limit(1);
+	if (!membership) throw error(403, 'Not a member of this team');
+
 	if (fileRecord.userId !== locals.user.id) throw error(403, 'Not your file');
 
 	// Delete from SeaweedFS + DB

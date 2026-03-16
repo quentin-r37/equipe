@@ -1,7 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { channel, file } from '$lib/server/db/schema';
+import { channel, file, teamMember } from '$lib/server/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { uploadFile, deleteFile } from '$lib/server/seaweedfs';
 
@@ -16,6 +16,16 @@ export const load: PageServerLoad = async (event) => {
 		.where(eq(channel.id, channelId))
 		.limit(1);
 	if (!ch) throw error(404, 'Channel not found');
+
+	// Verify user is a member of the channel's team
+	const [membership] = await db
+		.select()
+		.from(teamMember)
+		.where(
+			and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, event.locals.user.id))
+		)
+		.limit(1);
+	if (!membership) throw error(403, 'Not a member of this team');
 
 	const files = await db
 		.select()
@@ -44,6 +54,16 @@ export const actions: Actions = {
 			.where(eq(channel.id, channelId))
 			.limit(1);
 		if (!ch) throw error(404, 'Channel not found');
+
+		// Verify user is a member of the channel's team
+		const [membership] = await db
+			.select()
+			.from(teamMember)
+			.where(
+				and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, event.locals.user.id))
+			)
+			.limit(1);
+		if (!membership) return fail(403, { message: 'Not a team member' });
 
 		const formData = await event.request.formData();
 		const uploadedFile = formData.get('file') as File | null;

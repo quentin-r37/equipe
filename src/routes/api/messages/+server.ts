@@ -1,11 +1,11 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
-import { message, file, channel } from '$lib/server/db/schema';
+import { message, file, channel, teamMember } from '$lib/server/db/schema';
 import { messageBus } from '$lib/server/messages';
 import type { ChatFile } from '$lib/server/messages';
 import { uploadFile, deleteFile as deleteStorageFile } from '$lib/server/seaweedfs';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) throw error(401, 'Not authenticated');
@@ -38,6 +38,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		.where(eq(channel.id, channelId))
 		.limit(1);
 	if (!ch) throw error(404, 'Channel not found');
+
+	// Verify user is a member of the channel's team
+	const [membership] = await db
+		.select()
+		.from(teamMember)
+		.where(and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, locals.user.id)))
+		.limit(1);
+	if (!membership) throw error(403, 'Not a member of this team');
 
 	const [inserted] = await db
 		.insert(message)

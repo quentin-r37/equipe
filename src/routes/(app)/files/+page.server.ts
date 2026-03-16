@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { file, teamMember } from '$lib/server/db/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, inArray } from 'drizzle-orm';
 import { uploadFile, deleteFile } from '$lib/server/seaweedfs';
 
 export const load: PageServerLoad = async (event) => {
@@ -18,9 +18,15 @@ export const load: PageServerLoad = async (event) => {
 
 	const teamIds = memberships.map((m) => m.teamId);
 
-	let files: typeof allFiles = [];
-	const allFiles = await db.select().from(file).orderBy(desc(file.createdAt)).limit(100);
-	files = allFiles.filter((f) => teamIds.includes(f.teamId));
+	const files =
+		teamIds.length > 0
+			? await db
+					.select()
+					.from(file)
+					.where(inArray(file.teamId, teamIds))
+					.orderBy(desc(file.createdAt))
+					.limit(100)
+			: [];
 
 	return {
 		files: files.map((f) => ({
