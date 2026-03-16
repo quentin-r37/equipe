@@ -24,7 +24,7 @@ services:
       seaweedfs:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'node', '-e', "fetch('http://localhost:3000').then(r=>{if(!r.ok)throw r;process.exit(0)}).catch(()=>process.exit(1))"]
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3000']
       interval: 10s
       timeout: 5s
       retries: 5
