@@ -8,7 +8,8 @@
       "Bash(mkdir:*)",
       "mcp__svelte__svelte-autofixer",
       "Bash(cd:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(docker exec:*)"
     ]
   }
 }
