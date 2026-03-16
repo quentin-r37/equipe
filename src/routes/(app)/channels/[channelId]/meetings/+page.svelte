@@ -117,4 +117,19 @@
 		align-items: center;
 		gap: var(--cds-spacing-04);
 	}
+
+	@media (max-width: 672px) {
+		.meetings-container {
+			padding: var(--cds-spacing-04) var(--cds-spacing-04);
+		}
+
+		.meeting-row {
+			flex-wrap: wrap;
+			gap: var(--cds-spacing-03);
+		}
+
+		.meeting-actions {
+			gap: var(--cds-spacing-02);
+		}
+	}
 </style>

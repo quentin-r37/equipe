@@ -183,4 +183,10 @@
 		width: 100%;
 		font-size: 0.875rem;
 	}
+
+	@media (max-width: 672px) {
+		.files-container {
+			padding: var(--cds-spacing-04) var(--cds-spacing-04);
+		}
+	}
 </style>
