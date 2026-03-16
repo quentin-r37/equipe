@@ -52,5 +52,26 @@ export const actions: Actions = {
 			.where(eq(meeting.id, meetingId));
 
 		return { success: true };
+	},
+	delete: async (event) => {
+		if (!event.locals.user) throw redirect(302, '/login');
+
+		const formData = await event.request.formData();
+		const meetingId = formData.get('meetingId')?.toString() ?? '';
+
+		const [m] = await db
+			.select()
+			.from(meeting)
+			.where(eq(meeting.id, meetingId))
+			.limit(1);
+
+		if (!m) return fail(404, { message: 'Meeting not found' });
+		if (m.createdBy !== event.locals.user.id) {
+			return fail(403, { message: 'Only the meeting creator can delete' });
+		}
+
+		await db.delete(meeting).where(eq(meeting.id, meetingId));
+
+		return { success: true };
 	}
 };

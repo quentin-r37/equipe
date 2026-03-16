@@ -12,6 +12,7 @@
 		Column
 	} from 'carbon-components-svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
+	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import type { PageServerData } from './$types';
 	import type { LayoutServerData } from './$types';
 
@@ -37,10 +38,24 @@
 					<ul class="tile-list">
 						{#each data.teams as t (t.id)}
 							<li class="tile-list-item">
-								<span class="item-name">{t.name}</span>
-								{#if t.description}
-									<span class="item-desc">{t.description}</span>
-								{/if}
+								<div class="item-row">
+									<div>
+										<span class="item-name">{t.name}</span>
+										{#if t.description}
+											<span class="item-desc">{t.description}</span>
+										{/if}
+									</div>
+									<form method="post" action="?/deleteTeam" use:enhance>
+										<input type="hidden" name="teamId" value={t.id} />
+										<Button
+											size="small"
+											kind="danger-ghost"
+											icon={TrashCan}
+											iconDescription="Delete team"
+											type="submit"
+										/>
+									</form>
+								</div>
 							</li>
 						{/each}
 					</ul>
@@ -60,9 +75,21 @@
 					<ul class="tile-list">
 						{#each data.channels as ch (ch.id)}
 							<li class="tile-list-item">
-								<a href="/channels/{ch.id}">
-									# {ch.name}
-								</a>
+								<div class="item-row">
+									<a href="/channels/{ch.id}">
+										# {ch.name}
+									</a>
+									<form method="post" action="?/deleteChannel" use:enhance>
+										<input type="hidden" name="channelId" value={ch.id} />
+										<Button
+											size="small"
+											kind="danger-ghost"
+											icon={TrashCan}
+											iconDescription="Delete channel"
+											type="submit"
+										/>
+									</form>
+								</div>
 							</li>
 						{/each}
 					</ul>
@@ -180,6 +207,12 @@
 		padding: var(--cds-spacing-04);
 		background: var(--cds-layer-01);
 		border-radius: 4px;
+	}
+
+	.item-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
 	}
 
 	.item-name {

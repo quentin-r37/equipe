@@ -2,8 +2,9 @@ import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
-import { team, teamMember, channel, meeting } from '$lib/server/db/schema';
+import { team, teamMember, channel, meeting, file } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { deleteFile } from '$lib/server/seaweedfs';
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) throw redirect(302, '/login');
@@ -77,6 +78,77 @@ export const actions: Actions = {
 			name,
 			createdBy: event.locals.user.id
 		});
+
+		return { success: true };
+	},
+	deleteTeam: async (event) => {
+		if (!event.locals.user) throw redirect(302, '/login');
+
+		const formData = await event.request.formData();
+		const teamId = formData.get('teamId')?.toString() ?? '';
+
+		if (!teamId) return fail(400, { message: 'Team ID is required' });
+
+		// Only the team owner can delete
+		const [membership] = await db
+			.select()
+			.from(teamMember)
+			.where(
+				and(
+					eq(teamMember.teamId, teamId),
+					eq(teamMember.userId, event.locals.user.id),
+					eq(teamMember.role, 'owner')
+				)
+			)
+			.limit(1);
+
+		if (!membership) return fail(403, { message: 'Only the team owner can delete the team' });
+
+		// Delete associated files from SeaweedFS before cascade removes DB records
+		const teamFiles = await db.select().from(file).where(eq(file.teamId, teamId));
+		for (const f of teamFiles) {
+			await deleteFile(f.storagePath);
+		}
+
+		await db.delete(team).where(eq(team.id, teamId));
+
+		return { success: true };
+	},
+	deleteChannel: async (event) => {
+		if (!event.locals.user) throw redirect(302, '/login');
+
+		const formData = await event.request.formData();
+		const channelId = formData.get('channelId')?.toString() ?? '';
+
+		if (!channelId) return fail(400, { message: 'Channel ID is required' });
+
+		const [ch] = await db
+			.select()
+			.from(channel)
+			.where(eq(channel.id, channelId))
+			.limit(1);
+
+		if (!ch) return fail(404, { message: 'Channel not found' });
+
+		// Allow channel creator or team owner/admin
+		const [membership] = await db
+			.select()
+			.from(teamMember)
+			.where(
+				and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, event.locals.user.id))
+			)
+			.limit(1);
+
+		if (!membership) return fail(403, { message: 'Not a team member' });
+
+		const isCreator = ch.createdBy === event.locals.user.id;
+		const isOwnerOrAdmin = membership.role === 'owner' || membership.role === 'admin';
+
+		if (!isCreator && !isOwnerOrAdmin) {
+			return fail(403, { message: 'Only the channel creator or team admin can delete' });
+		}
+
+		await db.delete(channel).where(eq(channel.id, channelId));
 
 		return { success: true };
 	}

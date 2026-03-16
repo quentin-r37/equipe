@@ -2,7 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { channel, meeting } from '$lib/server/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) throw redirect(302, '/login');
@@ -60,5 +60,26 @@ export const actions: Actions = {
 			.returning();
 
 		throw redirect(302, `/meetings/${newMeeting.id}`);
+	},
+	delete: async (event) => {
+		if (!event.locals.user) throw redirect(302, '/login');
+
+		const formData = await event.request.formData();
+		const meetingId = formData.get('meetingId')?.toString() ?? '';
+
+		const [m] = await db
+			.select()
+			.from(meeting)
+			.where(eq(meeting.id, meetingId))
+			.limit(1);
+
+		if (!m) return fail(404, { message: 'Meeting not found' });
+		if (m.createdBy !== event.locals.user.id) {
+			return fail(403, { message: 'Only the meeting creator can delete' });
+		}
+
+		await db.delete(meeting).where(eq(meeting.id, meetingId));
+
+		return { success: true };
 	}
 };

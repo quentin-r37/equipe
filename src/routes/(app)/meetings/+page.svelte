@@ -3,6 +3,7 @@
 	import { Button, TextInput, Tile, Modal, Select, SelectItem, Tag } from 'carbon-components-svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
+	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import type { PageServerData } from './$types';
 	import type { LayoutServerData } from '../$types';
 
@@ -36,6 +37,16 @@
 						{#if m.status === 'active'}
 							<Button size="small" icon={VideoChat} href="/meetings/{m.id}">Join</Button>
 						{/if}
+						<form method="post" action="?/delete" use:enhance>
+							<input type="hidden" name="meetingId" value={m.id} />
+							<Button
+								size="small"
+								kind="danger-ghost"
+								icon={TrashCan}
+								iconDescription="Delete meeting"
+								type="submit"
+							/>
+						</form>
 					</div>
 				</div>
 			</Tile>
