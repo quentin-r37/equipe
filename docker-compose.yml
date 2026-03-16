@@ -63,6 +63,10 @@ services:
     ports:
       - 7881:7881 # RTC (TCP)
       - 7882:7882/udp # RTC (UDP)
+    labels:                                                                                                                                             - "traefik.http.middlewares.livekit-cors.headers.accesscontrolalloworiginlist=https://equipe.ideastudio.dev"
+      - "traefik.http.middlewares.livekit-cors.headers.accesscontrolallowmethods=GET,POST,OPTIONS"                                              
+      - "traefik.http.middlewares.livekit-cors.headers.accesscontrolallowheaders=*"                                                             
+      - "traefik.http.middlewares.livekit-cors.headers.accesscontrolmaxage=3600" 
     configs:
       - source: livekit_config
         target: /etc/livekit.yaml
