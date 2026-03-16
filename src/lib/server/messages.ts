@@ -20,11 +20,20 @@ export interface ChatMessage {
 	files?: ChatFile[];
 }
 
+export type ChatEvent =
+	| { type: 'message'; data: ChatMessage }
+	| { type: 'update'; data: ChatMessage }
+	| { type: 'delete'; data: { id: string } }
+	| { type: 'file_delete'; data: { id: string; messageId: string } };
+
 export const messageBus = {
 	publish(channelId: string, msg: ChatMessage) {
-		emitter.emit(`channel:${channelId}`, msg);
+		emitter.emit(`channel:${channelId}`, { type: 'message', data: msg } satisfies ChatEvent);
 	},
-	subscribe(channelId: string, callback: (msg: ChatMessage) => void): () => void {
+	publishEvent(channelId: string, event: ChatEvent) {
+		emitter.emit(`channel:${channelId}`, event);
+	},
+	subscribe(channelId: string, callback: (event: ChatEvent) => void): () => void {
 		emitter.on(`channel:${channelId}`, callback);
 		return () => {
 			emitter.off(`channel:${channelId}`, callback);

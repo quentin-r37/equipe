@@ -5,6 +5,9 @@
 	import Attachment from 'carbon-icons-svelte/lib/Attachment.svelte';
 	import Close from 'carbon-icons-svelte/lib/Close.svelte';
 	import Download from 'carbon-icons-svelte/lib/Download.svelte';
+	import Edit from 'carbon-icons-svelte/lib/Edit.svelte';
+	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
+	import Checkmark from 'carbon-icons-svelte/lib/Checkmark.svelte';
 	import type { PageData } from './$types';
 
 	interface ChatFile {
@@ -34,6 +37,10 @@
 	let messagesContainer: HTMLDivElement | undefined = $state();
 	let fileInput: HTMLInputElement | undefined = $state();
 
+	// Edit state
+	let editingId = $state<string | null>(null);
+	let editContent = $state('');
+
 	function scrollToBottom() {
 		if (messagesContainer) {
 			messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -45,7 +52,8 @@
 		sseMessages = [];
 
 		const es = new EventSource(`/api/messages/stream?channelId=${channelId}`);
-		es.onmessage = (event) => {
+
+		es.addEventListener('message', (event) => {
 			const msg: ChatMessage = JSON.parse(event.data);
 			const isDuplicate =
 				sseMessages.some((m) => m.id === msg.id) ||
@@ -54,7 +62,47 @@
 				sseMessages = [...sseMessages, msg];
 				requestAnimationFrame(scrollToBottom);
 			}
-		};
+		});
+
+		es.addEventListener('update', (event) => {
+			const updated: ChatMessage = JSON.parse(event.data);
+			sseMessages = sseMessages.map((m) => (m.id === updated.id ? updated : m));
+			// Also update in data.messages by replacing via sseMessages
+			const inLoaded = data.messages.findIndex((m: ChatMessage) => m.id === updated.id);
+			if (inLoaded !== -1) {
+				(data.messages as ChatMessage[])[inLoaded] = updated;
+				// Trigger reactivity
+				data.messages = [...data.messages];
+			}
+		});
+
+		es.addEventListener('delete', (event) => {
+			const { id } = JSON.parse(event.data);
+			sseMessages = sseMessages.filter((m) => m.id !== id);
+			const inLoaded = data.messages.findIndex((m: ChatMessage) => m.id === id);
+			if (inLoaded !== -1) {
+				(data.messages as ChatMessage[]).splice(inLoaded, 1);
+				data.messages = [...data.messages];
+			}
+		});
+
+		es.addEventListener('file_delete', (event) => {
+			const { id: fileId, messageId } = JSON.parse(event.data);
+			function removeFile(msg: ChatMessage) {
+				if (msg.id === messageId && msg.files) {
+					return { ...msg, files: msg.files.filter((f) => f.id !== fileId) };
+				}
+				return msg;
+			}
+			sseMessages = sseMessages.map(removeFile);
+			const inLoaded = data.messages.findIndex((m: ChatMessage) => m.id === messageId);
+			if (inLoaded !== -1) {
+				(data.messages as ChatMessage[])[inLoaded] = removeFile(
+					(data.messages as ChatMessage[])[inLoaded]
+				);
+				data.messages = [...data.messages];
+			}
+		});
 
 		requestAnimationFrame(scrollToBottom);
 
@@ -147,6 +195,7 @@
 	}
 
 	function handlePaste(e: ClipboardEvent) {
+		if (editingId) return;
 		const items = e.clipboardData?.items;
 		if (!items) return;
 		const files: File[] = [];
@@ -160,6 +209,47 @@
 			e.preventDefault();
 			addFiles(files);
 		}
+	}
+
+	// ── Edit / Delete ──
+
+	function startEdit(msg: ChatMessage) {
+		editingId = msg.id;
+		editContent = msg.content;
+	}
+
+	function cancelEdit() {
+		editingId = null;
+		editContent = '';
+	}
+
+	async function saveEdit() {
+		if (!editingId) return;
+		await fetch('/api/messages', {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ id: editingId, content: editContent })
+		});
+		editingId = null;
+		editContent = '';
+	}
+
+	function handleEditKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault();
+			saveEdit();
+		}
+		if (e.key === 'Escape') {
+			cancelEdit();
+		}
+	}
+
+	async function deleteMessage(id: string) {
+		await fetch(`/api/messages?id=${id}`, { method: 'DELETE' });
+	}
+
+	async function deleteFileFromMessage(fileId: string) {
+		await fetch(`/api/files?id=${fileId}`, { method: 'DELETE' });
 	}
 
 	function formatTime(iso: string) {
@@ -183,6 +273,8 @@
 	function isAudio(mimeType: string): boolean {
 		return mimeType.startsWith('audio/');
 	}
+
+	const isOwn = (msg: ChatMessage) => msg.userId === data.user.id;
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -204,7 +296,7 @@
 			<p class="empty-state">No messages yet. Start the conversation!</p>
 		{:else}
 			{#each messages as msg (msg.id)}
-				<div class="message">
+				<div class="message" class:own={isOwn(msg)}>
 					<div class="avatar">
 						{msg.userName.charAt(0).toUpperCase()}
 					</div>
@@ -212,53 +304,106 @@
 						<div class="message-meta">
 							<span class="author">{msg.userName}</span>
 							<span class="time">{formatTime(msg.createdAt)}</span>
+							{#if isOwn(msg)}
+								<div class="message-actions">
+									{#if editingId !== msg.id}
+										<button class="action-btn" title="Edit" onclick={() => startEdit(msg)}>
+											<Edit size={16} />
+										</button>
+									{/if}
+									<button
+										class="action-btn danger"
+										title="Delete"
+										onclick={() => deleteMessage(msg.id)}
+									>
+										<TrashCan size={16} />
+									</button>
+								</div>
+							{/if}
 						</div>
-						{#if msg.content}
+						{#if editingId === msg.id}
+							<div class="edit-row">
+								<div class="edit-field">
+									<TextInput
+										bind:value={editContent}
+										on:keydown={handleEditKeydown}
+										hideLabel
+										labelText="Edit message"
+										size="sm"
+									/>
+								</div>
+								<Button
+									icon={Checkmark}
+									iconDescription="Save"
+									kind="ghost"
+									size="small"
+									on:click={saveEdit}
+								/>
+								<Button
+									icon={Close}
+									iconDescription="Cancel"
+									kind="ghost"
+									size="small"
+									on:click={cancelEdit}
+								/>
+							</div>
+						{:else if msg.content}
 							<p class="message-text">{msg.content}</p>
 						{/if}
 						{#if msg.files && msg.files.length > 0}
 							<div class="message-files">
 								{#each msg.files as f (f.id)}
-									{#if isImage(f.mimeType)}
-										<a
-											href={resolve(`/api/files?id=${f.id}`)}
-											target="_blank"
-											class="file-preview image-preview"
-										>
-											<img
-												src={resolve(`/api/files?id=${f.id}&inline=1`)}
-												alt={f.name}
-												loading="lazy"
-											/>
-										</a>
-									{:else if isVideo(f.mimeType)}
-										<!-- svelte-ignore a11y_media_has_caption -->
-										<video
-											src={resolve(`/api/files?id=${f.id}&inline=1`)}
-											controls
-											preload="metadata"
-											class="file-preview video-preview"
-										></video>
-									{:else if isAudio(f.mimeType)}
-										<div class="file-attachment audio-attachment">
-											<span class="file-name">{f.name}</span>
-											<audio
+									<div class="file-wrapper">
+										{#if isImage(f.mimeType)}
+											<a
+												href={resolve(`/api/files?id=${f.id}`)}
+												target="_blank"
+												class="file-preview image-preview"
+											>
+												<img
+													src={resolve(`/api/files?id=${f.id}&inline=1`)}
+													alt={f.name}
+													loading="lazy"
+												/>
+											</a>
+										{:else if isVideo(f.mimeType)}
+											<!-- svelte-ignore a11y_media_has_caption -->
+											<video
 												src={resolve(`/api/files?id=${f.id}&inline=1`)}
 												controls
 												preload="metadata"
-											></audio>
-										</div>
-									{:else}
-										<a
-											href={resolve(`/api/files?id=${f.id}`)}
-											class="file-attachment"
-											target="_blank"
-										>
-											<Download size={16} />
-											<span class="file-name">{f.name}</span>
-											<span class="file-size">{formatSize(f.size)}</span>
-										</a>
-									{/if}
+												class="file-preview video-preview"
+											></video>
+										{:else if isAudio(f.mimeType)}
+											<div class="file-attachment audio-attachment">
+												<span class="file-name">{f.name}</span>
+												<audio
+													src={resolve(`/api/files?id=${f.id}&inline=1`)}
+													controls
+													preload="metadata"
+												></audio>
+											</div>
+										{:else}
+											<a
+												href={resolve(`/api/files?id=${f.id}`)}
+												class="file-attachment"
+												target="_blank"
+											>
+												<Download size={16} />
+												<span class="file-name">{f.name}</span>
+												<span class="file-size">{formatSize(f.size)}</span>
+											</a>
+										{/if}
+										{#if isOwn(msg)}
+											<button
+												class="file-remove-btn"
+												title="Remove file"
+												onclick={() => deleteFileFromMessage(f.id)}
+											>
+												<Close size={16} />
+											</button>
+										{/if}
+									</div>
 								{/each}
 							</div>
 						{/if}
@@ -406,12 +551,89 @@
 		margin-top: var(--cds-spacing-01);
 	}
 
+	/* ── Message actions (edit/delete) ── */
+	.message-actions {
+		display: flex;
+		gap: 2px;
+		margin-left: auto;
+		opacity: 0;
+		transition: opacity 0.15s;
+	}
+
+	.message:hover .message-actions {
+		opacity: 1;
+	}
+
+	.action-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: var(--cds-text-secondary);
+		padding: 4px;
+		border-radius: 4px;
+	}
+
+	.action-btn:hover {
+		background: var(--cds-layer-hover-01);
+		color: var(--cds-text-primary);
+	}
+
+	.action-btn.danger:hover {
+		color: var(--cds-support-error);
+	}
+
+	/* ── Edit row ── */
+	.edit-row {
+		display: flex;
+		align-items: center;
+		gap: var(--cds-spacing-02);
+		margin-top: var(--cds-spacing-02);
+	}
+
+	.edit-field {
+		flex: 1;
+	}
+
 	/* ── File attachments in messages ── */
 	.message-files {
 		display: flex;
 		flex-direction: column;
 		gap: var(--cds-spacing-03);
 		margin-top: var(--cds-spacing-03);
+	}
+
+	.file-wrapper {
+		position: relative;
+		width: fit-content;
+	}
+
+	.file-remove-btn {
+		position: absolute;
+		top: 4px;
+		right: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--cds-layer-01);
+		border: 1px solid var(--cds-border-subtle);
+		border-radius: 50%;
+		cursor: pointer;
+		color: var(--cds-text-secondary);
+		padding: 2px;
+		opacity: 0;
+		transition: opacity 0.15s;
+	}
+
+	.file-wrapper:hover .file-remove-btn {
+		opacity: 1;
+	}
+
+	.file-remove-btn:hover {
+		color: var(--cds-support-error);
+		background: var(--cds-layer-hover-01);
 	}
 
 	.image-preview {

@@ -4,7 +4,7 @@ import { db } from '$lib/server/db';
 import { message, file, channel } from '$lib/server/db/schema';
 import { messageBus } from '$lib/server/messages';
 import type { ChatFile } from '$lib/server/messages';
-import { uploadFile } from '$lib/server/seaweedfs';
+import { uploadFile, deleteFile as deleteStorageFile } from '$lib/server/seaweedfs';
 import { eq } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -32,7 +32,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		throw error(400, 'content or files are required');
 	}
 
-	// Get the channel to find the teamId
 	const [ch] = await db
 		.select({ teamId: channel.teamId })
 		.from(channel)
@@ -50,7 +49,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		})
 		.returning();
 
-	// Upload files to SeaweedFS and create DB records
 	const chatFiles: ChatFile[] = [];
 	for (const f of uploadedFiles) {
 		const fileId = crypto.randomUUID();
@@ -94,4 +92,67 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	messageBus.publish(channelId, chatMessage);
 
 	return json(chatMessage, { status: 201 });
+};
+
+export const PATCH: RequestHandler = async ({ request, locals }) => {
+	if (!locals.user) throw error(401, 'Not authenticated');
+
+	const { id, content } = await request.json();
+	if (!id) throw error(400, 'id is required');
+	if (content == null) throw error(400, 'content is required');
+
+	const [msg] = await db.select().from(message).where(eq(message.id, id)).limit(1);
+	if (!msg) throw error(404, 'Message not found');
+	if (msg.userId !== locals.user.id) throw error(403, 'Not your message');
+
+	const [updated] = await db
+		.update(message)
+		.set({ content: content.trim() })
+		.where(eq(message.id, id))
+		.returning();
+
+	const files = await db.select().from(file).where(eq(file.messageId, id));
+
+	const chatMessage = {
+		id: updated.id,
+		channelId: updated.channelId,
+		userId: updated.userId,
+		userName: updated.userName,
+		content: updated.content,
+		createdAt: updated.createdAt.toISOString(),
+		files:
+			files.length > 0
+				? files.map((f) => ({ id: f.id, name: f.name, size: f.size, mimeType: f.mimeType }))
+				: undefined
+	};
+
+	messageBus.publishEvent(updated.channelId, { type: 'update', data: chatMessage });
+
+	return json(chatMessage);
+};
+
+export const DELETE: RequestHandler = async ({ url, locals }) => {
+	if (!locals.user) throw error(401, 'Not authenticated');
+
+	const id = url.searchParams.get('id');
+	if (!id) throw error(400, 'id is required');
+
+	const [msg] = await db.select().from(message).where(eq(message.id, id)).limit(1);
+	if (!msg) throw error(404, 'Message not found');
+	if (msg.userId !== locals.user.id) throw error(403, 'Not your message');
+
+	// Delete attached files from SeaweedFS
+	const files = await db.select().from(file).where(eq(file.messageId, id));
+	for (const f of files) {
+		await deleteStorageFile(f.storagePath);
+	}
+	if (files.length > 0) {
+		await db.delete(file).where(eq(file.messageId, id));
+	}
+
+	await db.delete(message).where(eq(message.id, id));
+
+	messageBus.publishEvent(msg.channelId, { type: 'delete', data: { id } });
+
+	return json({ ok: true });
 };

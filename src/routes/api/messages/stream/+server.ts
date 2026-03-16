@@ -14,9 +14,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		start(controller) {
 			controller.enqueue(encoder.encode(': connected\n\n'));
 
-			const unsubscribe = messageBus.subscribe(channelId, (msg) => {
+			const unsubscribe = messageBus.subscribe(channelId, (event) => {
 				try {
-					controller.enqueue(encoder.encode(`data: ${JSON.stringify(msg)}\n\n`));
+					const payload = `event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`;
+					controller.enqueue(encoder.encode(payload));
 				} catch {
 					unsubscribe();
 				}
