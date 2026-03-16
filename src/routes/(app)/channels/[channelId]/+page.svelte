@@ -105,13 +105,61 @@
 	function handleFileSelect(e: Event) {
 		const input = e.target as HTMLInputElement;
 		if (input.files) {
-			pendingFiles = [...pendingFiles, ...Array.from(input.files)];
+			addFiles(input.files);
 		}
 		input.value = '';
 	}
 
+	function addFiles(files: FileList | File[]) {
+		pendingFiles = [...pendingFiles, ...Array.from(files)];
+	}
+
 	function removePendingFile(index: number) {
 		pendingFiles = pendingFiles.filter((_, i) => i !== index);
+	}
+
+	let dragging = $state(false);
+	let dragCounter = 0;
+
+	function handleDragEnter(e: DragEvent) {
+		e.preventDefault();
+		dragCounter++;
+		if (e.dataTransfer?.types.includes('Files')) dragging = true;
+	}
+
+	function handleDragOver(e: DragEvent) {
+		e.preventDefault();
+	}
+
+	function handleDragLeave(e: DragEvent) {
+		e.preventDefault();
+		dragCounter--;
+		if (dragCounter === 0) dragging = false;
+	}
+
+	function handleDrop(e: DragEvent) {
+		e.preventDefault();
+		dragCounter = 0;
+		dragging = false;
+		if (e.dataTransfer?.files.length) {
+			addFiles(e.dataTransfer.files);
+		}
+	}
+
+	function handlePaste(e: ClipboardEvent) {
+		const items = e.clipboardData?.items;
+		if (!items) return;
+		const files: File[] = [];
+		for (const item of items) {
+			if (item.kind === 'file') {
+				const f = item.getAsFile();
+				if (f) files.push(f);
+			}
+		}
+		if (files.length > 0) {
+			e.preventDefault();
+			addFiles(files);
+		}
 	}
 
 	function formatTime(iso: string) {
@@ -137,7 +185,20 @@
 	}
 </script>
 
-<div class="chat-container">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	class="chat-container"
+	ondragenter={handleDragEnter}
+	ondragover={handleDragOver}
+	ondragleave={handleDragLeave}
+	ondrop={handleDrop}
+	onpaste={handlePaste}
+>
+	{#if dragging}
+		<div class="drop-overlay">
+			<div class="drop-label">Drop files here</div>
+		</div>
+	{/if}
 	<div bind:this={messagesContainer} class="messages-area">
 		{#if messages.length === 0}
 			<p class="empty-state">No messages yet. Start the conversation!</p>
@@ -265,6 +326,28 @@
 		flex-direction: column;
 		flex: 1;
 		min-height: 0;
+		position: relative;
+	}
+
+	.drop-overlay {
+		position: absolute;
+		inset: 0;
+		z-index: 10;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		pointer-events: none;
+	}
+
+	.drop-label {
+		padding: var(--cds-spacing-05) var(--cds-spacing-07);
+		background: var(--cds-layer-01);
+		border: 2px dashed var(--cds-link-primary);
+		border-radius: 8px;
+		color: var(--cds-text-primary);
+		font-size: 1.125rem;
+		font-weight: 600;
 	}
 
 	.messages-area {
