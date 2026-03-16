@@ -134,4 +134,20 @@
 	.form-field {
 		margin-bottom: var(--cds-spacing-05);
 	}
+
+	@media (max-width: 672px) {
+		.page-header {
+			flex-wrap: wrap;
+			gap: var(--cds-spacing-03);
+		}
+
+		.meeting-row {
+			flex-wrap: wrap;
+			gap: var(--cds-spacing-03);
+		}
+
+		.meeting-actions {
+			gap: var(--cds-spacing-02);
+		}
+	}
 </style>
