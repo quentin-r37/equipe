@@ -1,0 +1,71 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - 3000:3000
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-equipe}:${POSTGRES_PASSWORD:?required}@db:5432/${POSTGRES_DB:-equipe}
+      ORIGIN: ${ORIGIN:?required}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?required}
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://livekit:7880}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?required}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?required}
+      SEAWEEDFS_FILER_URL: http://seaweedfs:8888
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-equipe}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ${POSTGRES_DB:-equipe}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-equipe} -d ${POSTGRES_DB:-equipe}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  seaweedfs:
+    image: chrislusf/seaweedfs
+    command: 'server -s3 -dir=/data -master.volumeSizeLimitMB=100'
+    restart: always
+    volumes:
+      - seaweedfs_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:9333/cluster/status']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  livekit:
+    image: livekit/livekit-server
+    command: --config /etc/livekit.yaml
+    restart: always
+    ports:
+      - 7881:7881     # RTC (TCP)
+      - 7882:7882/udp # RTC (UDP)
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+
+volumes:
+  pgdata:
+  seaweedfs_data:
