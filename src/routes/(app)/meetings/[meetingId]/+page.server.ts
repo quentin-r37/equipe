@@ -22,7 +22,7 @@ export const load: PageServerLoad = async (event) => {
 
 	return {
 		meeting: { ...m, createdAt: m.createdAt.toISOString() },
-		livekitUrl: env.LIVEKIT_URL?.replace('ws://', 'ws://') || 'ws://localhost:7880',
+		livekitUrl: env.LIVEKIT_URL || 'ws://localhost:7880',
 		token
 	};
 };
