@@ -13,7 +13,8 @@
       "Bash(find:*)",
       "WebFetch(domain:carbondesignsystem.com)",
       "WebFetch(domain:svelte.carbondesignsystem.com)",
-      "Bash(npx svelte-check:*)"
+      "Bash(npx svelte-check:*)",
+      "Bash(grep:*)"
     ]
   }
 }
