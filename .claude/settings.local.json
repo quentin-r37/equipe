@@ -9,7 +9,11 @@
       "mcp__svelte__svelte-autofixer",
       "Bash(cd:*)",
       "Bash(npm view:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:carbondesignsystem.com)",
+      "WebFetch(domain:svelte.carbondesignsystem.com)",
+      "Bash(npx svelte-check:*)"
     ]
   }
 }

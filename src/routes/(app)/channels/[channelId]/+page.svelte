@@ -68,43 +68,38 @@
 	}
 </script>
 
-<div class="flex h-[calc(100vh-7rem)] flex-col">
-	<!-- Channel header -->
-	<div class="border-b border-gray-200 px-6 py-3">
-		<h2 class="text-xl font-semibold"># {data.channel.name}</h2>
+<div class="chat-container">
+	<div class="chat-header">
+		<h2># {data.channel.name}</h2>
 		{#if data.channel.description}
-			<p class="text-sm text-gray-500">{data.channel.description}</p>
+			<p class="channel-desc">{data.channel.description}</p>
 		{/if}
 	</div>
 
-	<!-- Messages -->
-	<div bind:this={messagesContainer} class="flex-1 overflow-y-auto px-6 py-4">
+	<div bind:this={messagesContainer} class="messages-area">
 		{#if messages.length === 0}
-			<p class="py-8 text-center text-gray-400">No messages yet. Start the conversation!</p>
+			<p class="empty-state">No messages yet. Start the conversation!</p>
 		{:else}
 			{#each messages as msg (msg.id)}
-				<div class="mb-4 flex gap-3">
-					<div
-						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white"
-					>
+				<div class="message">
+					<div class="avatar">
 						{msg.userName.charAt(0).toUpperCase()}
 					</div>
 					<div>
-						<div class="flex items-baseline gap-2">
-							<span class="font-semibold">{msg.userName}</span>
-							<span class="text-xs text-gray-400">{formatTime(msg.createdAt)}</span>
+						<div class="message-meta">
+							<span class="author">{msg.userName}</span>
+							<span class="time">{formatTime(msg.createdAt)}</span>
 						</div>
-						<p class="mt-0.5 text-gray-800">{msg.content}</p>
+						<p class="message-text">{msg.content}</p>
 					</div>
 				</div>
 			{/each}
 		{/if}
 	</div>
 
-	<!-- Message input -->
-	<div class="border-t border-gray-200 px-6 py-3">
-		<div class="flex gap-2">
-			<div class="flex-1">
+	<div class="input-area">
+		<div class="input-row">
+			<div class="input-field">
 				<TextInput
 					bind:value={newMessage}
 					placeholder="Type a message..."
@@ -123,3 +118,86 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	.chat-container {
+		display: flex;
+		flex-direction: column;
+		height: calc(100vh - 7rem);
+	}
+
+	.chat-header {
+		padding: var(--cds-spacing-05) var(--cds-spacing-06);
+		border-bottom: 1px solid var(--cds-border-subtle);
+	}
+
+	.channel-desc {
+		font-size: 0.875rem;
+		color: var(--cds-text-secondary);
+	}
+
+	.messages-area {
+		flex: 1;
+		overflow-y: auto;
+		padding: var(--cds-spacing-05) var(--cds-spacing-06);
+	}
+
+	.empty-state {
+		text-align: center;
+		padding: var(--cds-spacing-07) 0;
+		color: var(--cds-text-placeholder);
+	}
+
+	.message {
+		display: flex;
+		gap: var(--cds-spacing-05);
+		margin-bottom: var(--cds-spacing-05);
+	}
+
+	.avatar {
+		width: 2rem;
+		height: 2rem;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 50%;
+		background: var(--cds-link-primary);
+		color: var(--cds-text-on-color);
+		font-size: 0.875rem;
+		font-weight: 700;
+	}
+
+	.message-meta {
+		display: flex;
+		align-items: baseline;
+		gap: var(--cds-spacing-03);
+	}
+
+	.author {
+		font-weight: 600;
+	}
+
+	.time {
+		font-size: 0.75rem;
+		color: var(--cds-text-placeholder);
+	}
+
+	.message-text {
+		margin-top: var(--cds-spacing-01);
+	}
+
+	.input-area {
+		padding: var(--cds-spacing-05) var(--cds-spacing-06);
+		border-top: 1px solid var(--cds-border-subtle);
+	}
+
+	.input-row {
+		display: flex;
+		gap: var(--cds-spacing-03);
+	}
+
+	.input-field {
+		flex: 1;
+	}
+</style>

@@ -59,10 +59,8 @@
 			await room.connect(data.livekitUrl, data.token);
 			connected = true;
 
-			// Publish local tracks
 			await room.localParticipant.enableCameraAndMicrophone();
 
-			// Attach local video
 			const localVideoTrack = room.localParticipant.getTrackPublication(
 				Track.Source.Camera
 			)?.track;
@@ -107,16 +105,15 @@
 	});
 </script>
 
-<div class="flex h-[calc(100vh-7rem)] flex-col">
-	<!-- Meeting header -->
-	<div class="flex items-center justify-between border-b border-gray-200 px-6 py-3">
+<div class="meeting-container">
+	<div class="meeting-header">
 		<div>
-			<h2 class="text-xl font-semibold">{data.meeting.title}</h2>
-			<div class="mt-1 flex items-center gap-2">
+			<h2>{data.meeting.title}</h2>
+			<div class="meeting-info">
 				<Tag type={data.meeting.status === 'active' ? 'green' : 'gray'}>
 					{data.meeting.status}
 				</Tag>
-				<span class="text-sm text-gray-500">
+				<span class="participant-count">
 					{participants.length} participant{participants.length !== 1 ? 's' : ''}
 				</span>
 			</div>
@@ -124,37 +121,28 @@
 	</div>
 
 	{#if errorMsg}
-		<InlineNotification kind="error" title="Connection Error" subtitle={errorMsg} class="m-4" />
+		<div class="error-notice">
+			<InlineNotification kind="error" title="Connection Error" subtitle={errorMsg} />
+		</div>
 	{/if}
 
-	<!-- Video grid -->
-	<div class="flex-1 overflow-hidden p-4">
-		<div
-			bind:this={videoGrid}
-			class="grid h-full gap-4"
-			style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));"
-		>
-			<!-- Local video -->
-			<div class="relative overflow-hidden rounded-lg bg-gray-900">
+	<div class="video-area">
+		<div bind:this={videoGrid} class="video-grid">
+			<div class="video-tile">
 				<video
 					bind:this={localVideoEl}
 					autoplay
 					muted
 					playsinline
-					class="h-full w-full object-cover"
+					class="video-element"
 					style="transform: scaleX(-1)"
 				></video>
-				<span
-					class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-sm text-white"
-				>
-					You
-				</span>
+				<span class="video-label">You</span>
 			</div>
 		</div>
 	</div>
 
-	<!-- Controls -->
-	<div class="flex items-center justify-center gap-4 border-t border-gray-200 py-4">
+	<div class="controls">
 		<Button
 			kind={micEnabled ? 'secondary' : 'danger'}
 			icon={micEnabled ? Microphone : MicrophoneOff}
@@ -177,3 +165,81 @@
 		</Button>
 	</div>
 </div>
+
+<style>
+	.meeting-container {
+		display: flex;
+		flex-direction: column;
+		height: calc(100vh - 7rem);
+	}
+
+	.meeting-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: var(--cds-spacing-05) var(--cds-spacing-06);
+		border-bottom: 1px solid var(--cds-border-subtle);
+	}
+
+	.meeting-info {
+		display: flex;
+		align-items: center;
+		gap: var(--cds-spacing-03);
+		margin-top: var(--cds-spacing-02);
+	}
+
+	.participant-count {
+		font-size: 0.875rem;
+		color: var(--cds-text-secondary);
+	}
+
+	.error-notice {
+		padding: var(--cds-spacing-05);
+	}
+
+	.video-area {
+		flex: 1;
+		overflow: hidden;
+		padding: var(--cds-spacing-05);
+	}
+
+	.video-grid {
+		display: grid;
+		height: 100%;
+		gap: var(--cds-spacing-05);
+		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	}
+
+	.video-tile {
+		position: relative;
+		overflow: hidden;
+		border-radius: 8px;
+		background: var(--cds-background-inverse);
+	}
+
+	.video-element {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.video-label {
+		position: absolute;
+		bottom: var(--cds-spacing-03);
+		left: var(--cds-spacing-03);
+		padding: var(--cds-spacing-01) var(--cds-spacing-03);
+		border-radius: 4px;
+		background: rgba(0, 0, 0, 0.6);
+		font-size: 0.875rem;
+		color: var(--cds-text-on-color);
+	}
+
+	.controls {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--cds-spacing-05);
+		padding: var(--cds-spacing-05) 0;
+		border-top: 1px solid var(--cds-border-subtle);
+	}
+</style>

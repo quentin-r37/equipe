@@ -8,7 +8,24 @@
 <h1>Hi, {data.user.name}!</h1>
 <p>Your user ID is {data.user.id}.</p>
 <form method="post" action="?/signOut" use:enhance>
-	<button class="rounded-md bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
-		>Sign out</button
-	>
+	<button type="submit">Sign out</button>
 </form>
+
+<style>
+	p {
+		margin: var(--cds-spacing-03) 0;
+	}
+
+	button {
+		padding: var(--cds-spacing-03) var(--cds-spacing-05);
+		background: var(--cds-link-primary);
+		color: var(--cds-text-on-color);
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+	}
+
+	button:hover {
+		background: #0353e9;
+	}
+</style>

@@ -5,9 +5,11 @@
 		TextInput,
 		Tile,
 		Modal,
-		InlineNotification,
 		Select,
-		SelectItem
+		SelectItem,
+		Grid,
+		Row,
+		Column
 	} from 'carbon-components-svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
 	import type { PageServerData } from './$types';
@@ -19,76 +21,82 @@
 	let showChannelModal = $state(false);
 </script>
 
-<div class="mb-6">
-	<h1 class="text-3xl font-semibold">Welcome, {data.user.name}</h1>
-	<p class="mt-1 text-gray-500">Your collaboration hub</p>
+<div class="page-header">
+	<h1>Welcome, {data.user.name}</h1>
+	<p class="subtitle">Your collaboration hub</p>
 </div>
 
-<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-	<!-- Teams section -->
-	<Tile>
-		<h3 class="mb-4 text-lg font-semibold">Teams</h3>
-		{#if data.teams.length === 0}
-			<p class="mb-4 text-gray-500">No teams yet. Create one to get started.</p>
-		{:else}
-			<ul class="mb-4 space-y-2">
-				{#each data.teams as t (t.id)}
-					<li class="rounded bg-gray-50 p-3">
-						<span class="font-medium">{t.name}</span>
-						{#if t.description}
-							<span class="block text-sm text-gray-500">{t.description}</span>
-						{/if}
-					</li>
-				{/each}
-			</ul>
-		{/if}
-		<Button size="small" icon={Add} on:click={() => (showTeamModal = true)}>Create Team</Button>
-	</Tile>
+<Grid fullWidth>
+	<Row>
+		<Column sm={4} md={4} lg={5} padding>
+			<Tile>
+				<h3>Teams</h3>
+				{#if data.teams.length === 0}
+					<p class="empty-text">No teams yet. Create one to get started.</p>
+				{:else}
+					<ul class="tile-list">
+						{#each data.teams as t (t.id)}
+							<li class="tile-list-item">
+								<span class="item-name">{t.name}</span>
+								{#if t.description}
+									<span class="item-desc">{t.description}</span>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+				<Button size="small" icon={Add} on:click={() => (showTeamModal = true)}>
+					Create Team
+				</Button>
+			</Tile>
+		</Column>
 
-	<!-- Channels section -->
-	<Tile>
-		<h3 class="mb-4 text-lg font-semibold">Channels</h3>
-		{#if data.channels.length === 0}
-			<p class="mb-4 text-gray-500">No channels yet.</p>
-		{:else}
-			<ul class="mb-4 space-y-2">
-				{#each data.channels as ch (ch.id)}
-					<li class="rounded bg-gray-50 p-3">
-						<a href="/channels/{ch.id}" class="font-medium text-blue-600 hover:underline">
-							# {ch.name}
-						</a>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-		{#if data.teams.length > 0}
-			<Button size="small" icon={Add} on:click={() => (showChannelModal = true)}>
-				Create Channel
-			</Button>
-		{/if}
-	</Tile>
+		<Column sm={4} md={4} lg={5} padding>
+			<Tile>
+				<h3>Channels</h3>
+				{#if data.channels.length === 0}
+					<p class="empty-text">No channels yet.</p>
+				{:else}
+					<ul class="tile-list">
+						{#each data.channels as ch (ch.id)}
+							<li class="tile-list-item">
+								<a href="/channels/{ch.id}">
+									# {ch.name}
+								</a>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+				{#if data.teams.length > 0}
+					<Button size="small" icon={Add} on:click={() => (showChannelModal = true)}>
+						Create Channel
+					</Button>
+				{/if}
+			</Tile>
+		</Column>
 
-	<!-- Active Meetings -->
-	<Tile>
-		<h3 class="mb-4 text-lg font-semibold">Active Meetings</h3>
-		{#if data.activeMeetings.length === 0}
-			<p class="mb-4 text-gray-500">No active meetings.</p>
-		{:else}
-			<ul class="mb-4 space-y-2">
-				{#each data.activeMeetings as m (m.id)}
-					<li class="rounded bg-gray-50 p-3">
-						<a href="/meetings/{m.id}" class="font-medium text-blue-600 hover:underline">
-							{m.title}
-						</a>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-		<Button size="small" icon={Add} href="/meetings">New Meeting</Button>
-	</Tile>
-</div>
+		<Column sm={4} md={8} lg={6} padding>
+			<Tile>
+				<h3>Active Meetings</h3>
+				{#if data.activeMeetings.length === 0}
+					<p class="empty-text">No active meetings.</p>
+				{:else}
+					<ul class="tile-list">
+						{#each data.activeMeetings as m (m.id)}
+							<li class="tile-list-item">
+								<a href="/meetings/{m.id}">
+									{m.title}
+								</a>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+				<Button size="small" icon={Add} href="/meetings">New Meeting</Button>
+			</Tile>
+		</Column>
+	</Row>
+</Grid>
 
-<!-- Create Team Modal -->
 <Modal
 	bind:open={showTeamModal}
 	modalHeading="Create Team"
@@ -102,14 +110,17 @@
 	}}
 >
 	<form id="create-team-form" method="post" action="?/createTeam" use:enhance>
-		<div class="mb-4">
+		<div class="form-field">
 			<TextInput name="name" labelText="Team name" placeholder="e.g., Engineering" required />
 		</div>
-		<TextInput name="description" labelText="Description" placeholder="What is this team about?" />
+		<TextInput
+			name="description"
+			labelText="Description"
+			placeholder="What is this team about?"
+		/>
 	</form>
 </Modal>
 
-<!-- Create Channel Modal -->
 <Modal
 	bind:open={showChannelModal}
 	modalHeading="Create Channel"
@@ -123,13 +134,73 @@
 	}}
 >
 	<form id="create-channel-form" method="post" action="?/createChannel" use:enhance>
-		<div class="mb-4">
+		<div class="form-field">
 			<Select name="teamId" labelText="Team">
 				{#each data.teams as t (t.id)}
 					<SelectItem value={t.id} text={t.name} />
 				{/each}
 			</Select>
 		</div>
-		<TextInput name="name" labelText="Channel name" placeholder="e.g., design-review" required />
+		<TextInput
+			name="name"
+			labelText="Channel name"
+			placeholder="e.g., design-review"
+			required
+		/>
 	</form>
 </Modal>
+
+<style>
+	.page-header {
+		margin-bottom: var(--cds-spacing-07);
+	}
+
+	.subtitle {
+		margin-top: var(--cds-spacing-03);
+		color: var(--cds-text-secondary);
+	}
+
+	h3 {
+		margin-bottom: var(--cds-spacing-05);
+	}
+
+	.empty-text {
+		margin-bottom: var(--cds-spacing-05);
+		color: var(--cds-text-secondary);
+	}
+
+	.tile-list {
+		margin-bottom: var(--cds-spacing-05);
+		display: flex;
+		flex-direction: column;
+		gap: var(--cds-spacing-04);
+	}
+
+	.tile-list-item {
+		padding: var(--cds-spacing-04);
+		background: var(--cds-layer-01);
+		border-radius: 4px;
+	}
+
+	.item-name {
+		font-weight: 500;
+	}
+
+	.item-desc {
+		display: block;
+		font-size: 0.875rem;
+		color: var(--cds-text-secondary);
+	}
+
+	.tile-list-item a {
+		font-weight: 500;
+	}
+
+	.tile-list-item a:hover {
+		text-decoration: underline;
+	}
+
+	.form-field {
+		margin-bottom: var(--cds-spacing-05);
+	}
+</style>

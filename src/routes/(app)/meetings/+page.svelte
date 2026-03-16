@@ -1,15 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import {
-		Button,
-		TextInput,
-		Tile,
-		DataTable,
-		Modal,
-		Select,
-		SelectItem,
-		Tag
-	} from 'carbon-components-svelte';
+	import { Button, TextInput, Tile, Modal, Select, SelectItem, Tag } from 'carbon-components-svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
 	import type { PageServerData } from './$types';
@@ -18,48 +9,34 @@
 	let { data }: { data: PageServerData & LayoutServerData } = $props();
 
 	let showModal = $state(false);
-
-	const headers = [
-		{ key: 'title', value: 'Title' },
-		{ key: 'status', value: 'Status' },
-		{ key: 'createdAt', value: 'Created' },
-		{ key: 'actions', value: '' }
-	];
-
-	const rows = $derived(
-		data.meetings.map((m) => ({
-			id: m.id,
-			title: m.title,
-			status: m.status,
-			createdAt: new Date(m.createdAt).toLocaleString()
-		}))
-	);
 </script>
 
-<div class="mb-6 flex items-center justify-between">
-	<h1 class="text-2xl font-semibold">Meetings</h1>
+<div class="page-header">
+	<h1>Meetings</h1>
 	<Button icon={Add} on:click={() => (showModal = true)}>New Meeting</Button>
 </div>
 
 {#if data.meetings.length === 0}
-	<Tile class="text-center">
-		<p class="py-8 text-gray-500">No meetings yet. Create one to start a video call.</p>
+	<Tile>
+		<p class="empty-state">No meetings yet. Create one to start a video call.</p>
 	</Tile>
 {:else}
-	<div class="space-y-3">
+	<div class="meeting-list">
 		{#each data.meetings as m (m.id)}
-			<Tile class="flex items-center justify-between">
-				<div>
-					<h3 class="font-semibold">{m.title}</h3>
-					<p class="text-sm text-gray-500">{new Date(m.createdAt).toLocaleString()}</p>
-				</div>
-				<div class="flex items-center gap-3">
-					<Tag type={m.status === 'active' ? 'green' : 'gray'}>
-						{m.status}
-					</Tag>
-					{#if m.status === 'active'}
-						<Button size="small" icon={VideoChat} href="/meetings/{m.id}">Join</Button>
-					{/if}
+			<Tile>
+				<div class="meeting-row">
+					<div>
+						<h3>{m.title}</h3>
+						<p class="meeting-date">{new Date(m.createdAt).toLocaleString()}</p>
+					</div>
+					<div class="meeting-actions">
+						<Tag type={m.status === 'active' ? 'green' : 'gray'}>
+							{m.status}
+						</Tag>
+						{#if m.status === 'active'}
+							<Button size="small" icon={VideoChat} href="/meetings/{m.id}">Join</Button>
+						{/if}
+					</div>
 				</div>
 			</Tile>
 		{/each}
@@ -78,8 +55,13 @@
 	}}
 >
 	<form id="create-meeting-form" method="post" action="?/create" use:enhance>
-		<div class="mb-4">
-			<TextInput name="title" labelText="Meeting title" placeholder="e.g., Weekly Standup" required />
+		<div class="form-field">
+			<TextInput
+				name="title"
+				labelText="Meeting title"
+				placeholder="e.g., Weekly Standup"
+				required
+			/>
 		</div>
 		<Select name="teamId" labelText="Team">
 			{#each data.teams as t (t.id)}
@@ -88,3 +70,49 @@
 		</Select>
 	</form>
 </Modal>
+
+<style>
+	.page-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: var(--cds-spacing-07);
+	}
+
+	.empty-state {
+		text-align: center;
+		padding: var(--cds-spacing-07) 0;
+		color: var(--cds-text-secondary);
+	}
+
+	.meeting-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--cds-spacing-05);
+	}
+
+	.meeting-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	h3 {
+		font-weight: 600;
+	}
+
+	.meeting-date {
+		font-size: 0.875rem;
+		color: var(--cds-text-secondary);
+	}
+
+	.meeting-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--cds-spacing-04);
+	}
+
+	.form-field {
+		margin-bottom: var(--cds-spacing-05);
+	}
+</style>
