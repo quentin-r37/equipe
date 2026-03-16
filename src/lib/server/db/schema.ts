@@ -9,7 +9,9 @@ export const task = pgTable('task', {
 
 // ── Teams ──────────────────────────────────────────────────────────
 export const team = pgTable('team', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull(),
 	description: text('description').default(''),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -17,8 +19,12 @@ export const team = pgTable('team', {
 });
 
 export const teamMember = pgTable('team_member', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	teamId: text('team_id').notNull().references(() => team.id, { onDelete: 'cascade' }),
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	teamId: text('team_id')
+		.notNull()
+		.references(() => team.id, { onDelete: 'cascade' }),
 	userId: text('user_id').notNull(),
 	role: text('role').notNull().default('member'), // 'owner' | 'admin' | 'member'
 	joinedAt: timestamp('joined_at').defaultNow().notNull()
@@ -26,8 +32,12 @@ export const teamMember = pgTable('team_member', {
 
 // ── Channels ───────────────────────────────────────────────────────
 export const channel = pgTable('channel', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	teamId: text('team_id').notNull().references(() => team.id, { onDelete: 'cascade' }),
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	teamId: text('team_id')
+		.notNull()
+		.references(() => team.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(),
 	description: text('description').default(''),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -36,8 +46,12 @@ export const channel = pgTable('channel', {
 
 // ── Messages ───────────────────────────────────────────────────────
 export const message = pgTable('message', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	channelId: text('channel_id').notNull().references(() => channel.id, { onDelete: 'cascade' }),
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	channelId: text('channel_id')
+		.notNull()
+		.references(() => channel.id, { onDelete: 'cascade' }),
 	userId: text('user_id').notNull(),
 	userName: text('user_name').notNull(),
 	content: text('content').notNull(),
@@ -46,8 +60,12 @@ export const message = pgTable('message', {
 
 // ── Meetings ───────────────────────────────────────────────────────
 export const meeting = pgTable('meeting', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	teamId: text('team_id').notNull().references(() => team.id, { onDelete: 'cascade' }),
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	teamId: text('team_id')
+		.notNull()
+		.references(() => team.id, { onDelete: 'cascade' }),
 	title: text('title').notNull(),
 	status: text('status').notNull().default('active'), // 'active' | 'ended'
 	createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -56,8 +74,12 @@ export const meeting = pgTable('meeting', {
 
 // ── Files ──────────────────────────────────────────────────────────
 export const file = pgTable('file', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	teamId: text('team_id').notNull().references(() => team.id, { onDelete: 'cascade' }),
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	teamId: text('team_id')
+		.notNull()
+		.references(() => team.id, { onDelete: 'cascade' }),
 	channelId: text('channel_id').references(() => channel.id, { onDelete: 'set null' }),
 	userId: text('user_id').notNull(),
 	userName: text('user_name').notNull(),

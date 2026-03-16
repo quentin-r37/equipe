@@ -79,9 +79,7 @@
 					<Chat size={24} />
 					<div>
 						<span class="stat-value">{data.channelCount}</span>
-						<span class="stat-label"
-							>{data.channelCount === 1 ? 'Channel' : 'Channels'}</span
-						>
+						<span class="stat-label">{data.channelCount === 1 ? 'Channel' : 'Channels'}</span>
 					</div>
 				</div>
 			</Tile>
@@ -92,9 +90,7 @@
 					<VideoChat size={24} />
 					<div>
 						<span class="stat-value">{data.meetingCount}</span>
-						<span class="stat-label"
-							>{data.meetingCount === 1 ? 'Meeting' : 'Meetings'}</span
-						>
+						<span class="stat-label">{data.meetingCount === 1 ? 'Meeting' : 'Meetings'}</span>
 					</div>
 				</div>
 			</Tile>
@@ -169,11 +165,7 @@
 			<div class="section-header">
 				<h3>Members</h3>
 				{#if isOwnerOrAdmin}
-					<Button
-						size="small"
-						icon={UserFollow}
-						on:click={() => (showAddMemberModal = true)}
-					>
+					<Button size="small" icon={UserFollow} on:click={() => (showAddMemberModal = true)}>
 						Add Member
 					</Button>
 				{/if}
@@ -215,10 +207,7 @@
 										</Select>
 									</form>
 								{:else}
-									<Tag
-										size="sm"
-										type={roleLabel[member.role]?.type ?? 'cool-gray'}
-									>
+									<Tag size="sm" type={roleLabel[member.role]?.type ?? 'cool-gray'}>
 										{roleLabel[member.role]?.text ?? member.role}
 									</Tag>
 								{/if}
@@ -253,9 +242,7 @@
 	on:click:button--secondary={() => (showRemoveConfirm = false)}
 	on:submit={() => {
 		if (removeTarget) {
-			const form = document.getElementById(
-				`remove-member-${removeTarget.id}`
-			) as HTMLFormElement;
+			const form = document.getElementById(`remove-member-${removeTarget.id}`) as HTMLFormElement;
 			form?.requestSubmit();
 		}
 		showRemoveConfirm = false;

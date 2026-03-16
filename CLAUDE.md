@@ -73,3 +73,5 @@ Uses Carbon Design System CSS tokens (`--cds-spacing-*`, `--cds-text-*`, `--cds-
 Required in `.env`: `DATABASE_URL`, `ORIGIN`, `BETTER_AUTH_SECRET`, `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `SEAWEEDFS_FILER_URL`.
 
 Optional: `ADMIN_EMAILS` — comma-separated list of emails that can access the admin panel (`/admin/users`).
+
+Optional: `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` — Brevo transactional email configuration for email verification and password reset.

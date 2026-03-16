@@ -11,23 +11,23 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d local"]
+      test: ['CMD-SHELL', 'pg_isready -U root -d local']
       interval: 5s
       timeout: 5s
       retries: 5
 
   seaweedfs:
     image: chrislusf/seaweedfs
-    command: "server -s3 -dir=/data -master.volumeSizeLimitMB=100"
+    command: 'server -s3 -dir=/data -master.volumeSizeLimitMB=100'
     ports:
-      - 9333:9333   # Master
-      - 8080:8080   # Volume
-      - 8888:8888   # Filer
-      - 8333:8333   # S3
+      - 9333:9333 # Master
+      - 8080:8080 # Volume
+      - 8888:8888 # Filer
+      - 8333:8333 # S3
     volumes:
       - seaweedfs_data:/data
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:9333/cluster/status"]
+      test: ['CMD', 'curl', '-sf', 'http://localhost:9333/cluster/status']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,8 +36,8 @@ services:
     image: livekit/livekit-server
     command: --config /etc/livekit.yaml
     ports:
-      - 7880:7880   # HTTP / WebSocket
-      - 7881:7881   # RTC (TCP)
+      - 7880:7880 # HTTP / WebSocket
+      - 7881:7881 # RTC (TCP)
       - 7882:7882/udp # RTC (UDP)
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml:ro

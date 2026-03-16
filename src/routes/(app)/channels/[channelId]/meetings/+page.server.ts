@@ -67,11 +67,7 @@ export const actions: Actions = {
 		const formData = await event.request.formData();
 		const meetingId = formData.get('meetingId')?.toString() ?? '';
 
-		const [m] = await db
-			.select()
-			.from(meeting)
-			.where(eq(meeting.id, meetingId))
-			.limit(1);
+		const [m] = await db.select().from(meeting).where(eq(meeting.id, meetingId)).limit(1);
 
 		if (!m) return fail(404, { message: 'Meeting not found' });
 		if (m.createdBy !== event.locals.user.id) {

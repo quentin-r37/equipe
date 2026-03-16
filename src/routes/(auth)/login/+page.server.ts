@@ -18,6 +18,12 @@ export const actions: Actions = {
 			await auth.api.signInEmail({ body: { email, password } });
 		} catch (error) {
 			if (error instanceof APIError) {
+				if (error.body?.code === 'EMAIL_NOT_VERIFIED') {
+					return fail(400, {
+						message:
+							'Veuillez vérifier votre adresse email avant de vous connecter. Consultez votre boîte de réception.'
+					});
+				}
 				return fail(400, { message: error.message || 'Sign in failed' });
 			}
 			return fail(500, { message: 'Unexpected error' });
@@ -42,6 +48,9 @@ export const actions: Actions = {
 			return fail(500, { message: 'Unexpected error' });
 		}
 
-		throw redirect(302, '/');
+		return {
+			success: true,
+			message: 'Un email de vérification a été envoyé. Consultez votre boîte de réception.'
+		};
 	}
 };

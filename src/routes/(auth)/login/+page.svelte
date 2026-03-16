@@ -24,11 +24,17 @@
 		<Tile>
 			<h2>{mode === 'login' ? 'Sign In' : 'Create Account'}</h2>
 
-			{#if form?.message}
+			{#if form?.message && !form?.success}
+				<div class="notification">
+					<InlineNotification kind="error" title="Error" subtitle={form.message} hideCloseButton />
+				</div>
+			{/if}
+
+			{#if form?.success}
 				<div class="notification">
 					<InlineNotification
-						kind="error"
-						title="Error"
+						kind="success"
+						title="Account created"
 						subtitle={form.message}
 						hideCloseButton
 					/>
@@ -38,12 +44,7 @@
 			<form method="post" action={mode === 'login' ? '?/signIn' : '?/signUp'} use:enhance>
 				{#if mode === 'register'}
 					<div class="form-field">
-						<TextInput
-							name="name"
-							labelText="Name"
-							placeholder="Your full name"
-							required
-						/>
+						<TextInput name="name" labelText="Name" placeholder="Your full name" required />
 					</div>
 				{/if}
 				<div class="form-field">
@@ -73,6 +74,11 @@
 						{mode === 'login' ? 'Need an account?' : 'Already have an account?'}
 					</button>
 				</div>
+				{#if mode === 'login'}
+					<div class="forgot-password">
+						<a href="/forgot-password">Forgot password?</a>
+					</div>
+				{/if}
 			</form>
 		</Tile>
 	</div>
@@ -135,6 +141,21 @@
 	}
 
 	.toggle-link:hover {
+		text-decoration: underline;
+	}
+
+	.forgot-password {
+		margin-top: var(--cds-spacing-04);
+		text-align: right;
+	}
+
+	.forgot-password a {
+		font-size: 0.875rem;
+		color: var(--cds-link-primary);
+		text-decoration: none;
+	}
+
+	.forgot-password a:hover {
 		text-decoration: underline;
 	}
 </style>

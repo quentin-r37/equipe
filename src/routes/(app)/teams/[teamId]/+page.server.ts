@@ -167,8 +167,7 @@ export const actions: Actions = {
 
 		// Only owner/admin can remove others; members can only leave themselves
 		const isSelf = target.userId === event.locals.user.id;
-		const isOwnerOrAdmin =
-			currentMembership.role === 'owner' || currentMembership.role === 'admin';
+		const isOwnerOrAdmin = currentMembership.role === 'owner' || currentMembership.role === 'admin';
 
 		if (!isSelf && !isOwnerOrAdmin) {
 			return fail(403, { message: 'Only team owners and admins can remove members' });

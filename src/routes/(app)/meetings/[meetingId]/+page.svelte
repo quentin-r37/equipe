@@ -61,9 +61,7 @@
 
 			await room.localParticipant.enableCameraAndMicrophone();
 
-			const localVideoTrack = room.localParticipant.getTrackPublication(
-				Track.Source.Camera
-			)?.track;
+			const localVideoTrack = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
 			if (localVideoTrack && localVideoEl) {
 				localVideoTrack.attach(localVideoEl);
 			}

@@ -179,21 +179,21 @@
 									</div>
 								</div>
 								<div class="team-actions">
-								<Button
-									size="small"
-									kind="ghost"
-									icon={UserFollow}
-									iconDescription="Add member"
-									on:click={() => openAddMember(t.id)}
-								/>
-								<Button
-									size="small"
-									kind="danger-ghost"
-									icon={TrashCan}
-									iconDescription="Delete team"
-									on:click={() => confirmDelete('team', t.id, t.name)}
-								/>
-							</div>
+									<Button
+										size="small"
+										kind="ghost"
+										icon={UserFollow}
+										iconDescription="Add member"
+										on:click={() => openAddMember(t.id)}
+									/>
+									<Button
+										size="small"
+										kind="danger-ghost"
+										icon={TrashCan}
+										iconDescription="Delete team"
+										on:click={() => confirmDelete('team', t.id, t.name)}
+									/>
+								</div>
 							</div>
 							{#if t.description}
 								<p class="team-description">{t.description}</p>
