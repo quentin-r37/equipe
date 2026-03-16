@@ -449,6 +449,8 @@
 		align-items: center;
 		justify-content: space-between;
 		margin-bottom: var(--cds-spacing-05);
+		flex-wrap: wrap;
+		gap: var(--cds-spacing-03);
 	}
 
 	.section-header h3 {
