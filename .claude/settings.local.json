@@ -22,7 +22,9 @@
       "WebFetch(domain:www.better-auth.com)",
       "WebFetch(domain:developers.brevo.com)",
       "Bash(git:*)",
-      "Bash(npx drizzle-kit:*)"
+      "Bash(npx drizzle-kit:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)"
     ]
   }
 }
