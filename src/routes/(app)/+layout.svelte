@@ -48,19 +48,21 @@
 <SideNav bind:isOpen={isSideNavOpen}>
 	<SideNavItems>
 		<SideNavLink icon={Home} text="Dashboard" href="/" isSelected={pathname === '/'} />
-		<SideNavDivider />
-		{#each data.teams as t (t.id)}
-			<SideNavMenu icon={Chat} text={t.name} expanded={true}>
-				{#each data.channels.filter((c) => c.teamId === t.id) as ch (ch.id)}
-					<SideNavMenuItem
-						href="/channels/{ch.id}"
-						text="# {ch.name}"
-						isSelected={pathname === `/channels/${ch.id}`}
-					/>
-				{/each}
-			</SideNavMenu>
-		{/each}
-		<SideNavDivider />
+		{#if data.teams.length > 0}
+			<SideNavDivider />
+			{#each data.teams as t (t.id)}
+				<SideNavMenu icon={Chat} text={t.name} expanded={true}>
+					{#each data.channels.filter((c) => c.teamId === t.id) as ch (ch.id)}
+						<SideNavMenuItem
+							href="/channels/{ch.id}"
+							text="# {ch.name}"
+							isSelected={pathname === `/channels/${ch.id}`}
+						/>
+					{/each}
+				</SideNavMenu>
+			{/each}
+			<SideNavDivider />
+		{/if}
 		<SideNavLink
 			icon={VideoChat}
 			text="Meetings"
