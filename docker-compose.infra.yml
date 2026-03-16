@@ -39,8 +39,22 @@ services:
       - 7880:7880 # HTTP / WebSocket
       - 7881:7881 # RTC (TCP)
       - 7882:7882/udp # RTC (UDP)
-    volumes:
-      - ./livekit.yaml:/etc/livekit.yaml:ro
+    configs:
+      - source: livekit_config
+        target: /etc/livekit.yaml
+
+configs:
+  livekit_config:
+    content: |
+      port: 7880
+      rtc:
+        tcp_port: 7881
+        udp_port: 7882
+        use_external_ip: false
+      keys:
+        devkey: secret1234567890secret1234567890
+      logging:
+        level: info
 
 volumes:
   pgdata:
