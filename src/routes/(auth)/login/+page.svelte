@@ -8,9 +8,9 @@
 		InlineNotification
 	} from 'carbon-components-svelte';
 	import Logo from '$lib/components/Logo.svelte';
-	import type { ActionData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	let { form }: { form: ActionData } = $props();
+	let { form, data }: { form: ActionData; data: PageData } = $props();
 
 	let mode = $state<'login' | 'register'>('login');
 </script>
@@ -80,6 +80,30 @@
 					</div>
 				{/if}
 			</form>
+
+			{#if data.microsoftEnabled}
+				<div class="divider">
+					<span>or</span>
+				</div>
+
+				<form method="post" action="?/signInMicrosoft">
+					<Button type="submit" kind="tertiary" class="microsoft-btn">
+						<svg
+							class="microsoft-icon"
+							width="20"
+							height="20"
+							viewBox="0 0 21 21"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<rect x="1" y="1" width="9" height="9" fill="#f25022" />
+							<rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+							<rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+							<rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+						</svg>
+						Sign in with Microsoft
+					</Button>
+				</form>
+			{/if}
 		</Tile>
 	</div>
 </div>
@@ -157,5 +181,34 @@
 
 	.forgot-password a:hover {
 		text-decoration: underline;
+	}
+
+	form :global(.microsoft-btn) {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--cds-spacing-03);
+		margin: 0 auto;
+	}
+
+	.microsoft-icon {
+		flex-shrink: 0;
+	}
+
+	.divider {
+		display: flex;
+		align-items: center;
+		gap: var(--cds-spacing-04);
+		margin: var(--cds-spacing-05) 0;
+		color: var(--cds-text-secondary);
+		font-size: 0.875rem;
+	}
+
+	.divider::before,
+	.divider::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--cds-border-subtle);
 	}
 </style>

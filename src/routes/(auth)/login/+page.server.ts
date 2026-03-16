@@ -2,10 +2,13 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
 import { APIError } from 'better-auth/api';
+import { env } from '$env/dynamic/private';
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) throw redirect(302, '/');
-	return {};
+	return {
+		microsoftEnabled: !!(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET)
+	};
 };
 
 export const actions: Actions = {
@@ -30,6 +33,22 @@ export const actions: Actions = {
 		}
 
 		throw redirect(302, '/');
+	},
+	signInMicrosoft: async () => {
+		let url: string | undefined;
+		try {
+			const result = await auth.api.signInSocial({
+				body: { provider: 'microsoft', callbackURL: '/' }
+			});
+			url = result.url;
+		} catch (error) {
+			if (error instanceof APIError) {
+				return fail(400, { message: error.message || 'Microsoft sign-in failed' });
+			}
+			return fail(500, { message: 'Microsoft sign-in failed' });
+		}
+		if (!url) return fail(500, { message: 'Microsoft sign-in failed' });
+		throw redirect(302, url);
 	},
 	signUp: async (event) => {
 		const formData = await event.request.formData();

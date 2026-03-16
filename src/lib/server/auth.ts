@@ -10,6 +10,13 @@ export const auth = betterAuth({
 	baseURL: env.ORIGIN,
 	secret: env.BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'pg' }),
+	socialProviders: {
+		microsoft: {
+			clientId: env.MICROSOFT_CLIENT_ID!,
+			clientSecret: env.MICROSOFT_CLIENT_SECRET!,
+			tenantId: env.MICROSOFT_TENANT_ID || 'common'
+		}
+	},
 	emailAndPassword: {
 		enabled: true,
 		requireEmailVerification: true,
