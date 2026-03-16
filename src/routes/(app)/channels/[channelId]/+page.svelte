@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button, TextInput } from 'carbon-components-svelte';
 	import SendAlt from 'carbon-icons-svelte/lib/SendAlt.svelte';
-	import type { PageServerData } from './$types';
+	import type { PageData } from './$types';
 
 	interface ChatMessage {
 		id: string;
@@ -12,7 +12,7 @@
 		createdAt: string;
 	}
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: { data: PageData } = $props();
 
 	let sseMessages = $state<ChatMessage[]>([]);
 	const messages = $derived([...data.messages, ...sseMessages]);
@@ -69,13 +69,6 @@
 </script>
 
 <div class="chat-container">
-	<div class="chat-header">
-		<h2># {data.channel.name}</h2>
-		{#if data.channel.description}
-			<p class="channel-desc">{data.channel.description}</p>
-		{/if}
-	</div>
-
 	<div bind:this={messagesContainer} class="messages-area">
 		{#if messages.length === 0}
 			<p class="empty-state">No messages yet. Start the conversation!</p>
@@ -123,17 +116,8 @@
 	.chat-container {
 		display: flex;
 		flex-direction: column;
-		height: calc(100vh - 7rem);
-	}
-
-	.chat-header {
-		padding: var(--cds-spacing-05) var(--cds-spacing-06);
-		border-bottom: 1px solid var(--cds-border-subtle);
-	}
-
-	.channel-desc {
-		font-size: 0.875rem;
-		color: var(--cds-text-secondary);
+		flex: 1;
+		min-height: 0;
 	}
 
 	.messages-area {
