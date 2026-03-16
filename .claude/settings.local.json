@@ -21,7 +21,8 @@
       "mcp__claude_ai_Context7__resolve-library-id",
       "WebFetch(domain:www.better-auth.com)",
       "WebFetch(domain:developers.brevo.com)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(npx drizzle-kit:*)"
     ]
   }
 }
