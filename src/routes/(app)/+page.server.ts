@@ -2,8 +2,8 @@ import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
-import { team, teamMember, channel, meeting, file } from '$lib/server/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { team, teamMember, channel, meeting, file, message } from '$lib/server/db/schema';
+import { eq, and, inArray, desc, count } from 'drizzle-orm';
 import { deleteFile } from '$lib/server/seaweedfs';
 
 export const load: PageServerLoad = async (event) => {
@@ -11,12 +11,69 @@ export const load: PageServerLoad = async (event) => {
 
 	const userId = event.locals.user.id;
 
-	const activeMeetings = await db
-		.select()
-		.from(meeting)
-		.where(eq(meeting.status, 'active'));
+	// Get user's team IDs
+	const memberships = await db
+		.select({ teamId: teamMember.teamId })
+		.from(teamMember)
+		.where(eq(teamMember.userId, userId));
+	const teamIds = memberships.map((m) => m.teamId);
 
-	return { activeMeetings };
+	const activeMeetings = await db.select().from(meeting).where(eq(meeting.status, 'active'));
+
+	// Member counts per team
+	let memberCounts: Record<string, number> = {};
+	if (teamIds.length > 0) {
+		const counts = await db
+			.select({ teamId: teamMember.teamId, count: count() })
+			.from(teamMember)
+			.where(inArray(teamMember.teamId, teamIds))
+			.groupBy(teamMember.teamId);
+		for (const c of counts) {
+			memberCounts[c.teamId] = c.count;
+		}
+	}
+
+	// File count for stats
+	let fileCount = 0;
+	if (teamIds.length > 0) {
+		const [result] = await db
+			.select({ count: count() })
+			.from(file)
+			.where(inArray(file.teamId, teamIds));
+		fileCount = result?.count ?? 0;
+	}
+
+	// Recent messages across user's channels
+	let recentMessages: {
+		id: string;
+		channelId: string;
+		userName: string;
+		content: string;
+		createdAt: Date;
+	}[] = [];
+	if (teamIds.length > 0) {
+		const userChannels = await db
+			.select({ id: channel.id })
+			.from(channel)
+			.where(inArray(channel.teamId, teamIds));
+		const channelIds = userChannels.map((c) => c.id);
+		if (channelIds.length > 0) {
+			recentMessages = await db
+				.select({
+					id: message.id,
+					channelId: message.channelId,
+					userName: message.userName,
+					content: message.content,
+					createdAt: message.createdAt
+				})
+				.from(message)
+				.where(inArray(message.channelId, channelIds))
+				.orderBy(desc(message.createdAt))
+				.limit(5);
+		}
+	}
+
+	return { activeMeetings, memberCounts, fileCount, recentMessages };
 };
 
 export const actions: Actions = {
@@ -122,11 +179,7 @@ export const actions: Actions = {
 
 		if (!channelId) return fail(400, { message: 'Channel ID is required' });
 
-		const [ch] = await db
-			.select()
-			.from(channel)
-			.where(eq(channel.id, channelId))
-			.limit(1);
+		const [ch] = await db.select().from(channel).where(eq(channel.id, channelId)).limit(1);
 
 		if (!ch) return fail(404, { message: 'Channel not found' });
 
@@ -134,9 +187,7 @@ export const actions: Actions = {
 		const [membership] = await db
 			.select()
 			.from(teamMember)
-			.where(
-				and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, event.locals.user.id))
-			)
+			.where(and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, event.locals.user.id)))
 			.limit(1);
 
 		if (!membership) return fail(403, { message: 'Not a team member' });
