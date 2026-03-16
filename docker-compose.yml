@@ -23,11 +23,11 @@ services:
         condition: service_healthy
       seaweedfs:
         condition: service_healthy
-    healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3000']
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    # healthcheck:
+    #   test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3000']
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
 
   db:
     image: postgres:16-alpine
@@ -61,7 +61,7 @@ services:
     command: --config /etc/livekit.yaml
     restart: always
     ports:
-      - 7881:7881     # RTC (TCP)
+      - 7881:7881 # RTC (TCP)
       - 7882:7882/udp # RTC (UDP)
     configs:
       - source: livekit_config
