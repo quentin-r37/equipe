@@ -27,6 +27,8 @@ class NotificationState {
 	private timers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
 	add(notification: AppNotification) {
+		if (browser && window.location.pathname === notification.href) return;
+
 		this.notifications = [...this.notifications, notification];
 
 		const timer = setTimeout(() => {
