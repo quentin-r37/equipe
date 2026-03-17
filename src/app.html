@@ -20,13 +20,17 @@
 					var c = colors[a];
 					if (c) {
 						var s = document.documentElement.style;
+						s.setProperty('--cds-interactive-01', c);
+						s.setProperty('--cds-interactive-04', c);
+						s.setProperty('--cds-link-01', c);
 						s.setProperty('--cds-link-primary', c);
 						s.setProperty('--cds-link-primary-hover', c);
-						s.setProperty('--cds-interactive', c);
 						s.setProperty('--cds-focus', c);
 						s.setProperty('--cds-border-interactive', c);
-						s.setProperty('--cds-button-primary', c);
+						s.setProperty('--cds-interactive', c);
 						s.setProperty('--cds-background-brand', c);
+						s.setProperty('--cds-hover-primary', c);
+						s.setProperty('--cds-active-primary', c);
 					}
 				}
 			})();

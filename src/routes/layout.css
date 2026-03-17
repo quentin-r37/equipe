@@ -12,3 +12,61 @@
 	--cds-spacing-09: 3rem;
 	--cds-spacing-10: 4rem;
 }
+
+/*
+ * SideNav theme overrides — Carbon's compiled CSS hardcodes light-theme colors
+ * for the sidebar. These rules make them follow the active Carbon theme.
+ */
+.bx--side-nav {
+	background-color: var(--cds-ui-background, #fff);
+	color: var(--cds-text-02, #525252);
+}
+
+.bx--side-nav__link > .bx--side-nav__link-text,
+.bx--side-nav__submenu,
+.bx--side-nav a.bx--header__menu-item .bx--text-truncate-end {
+	color: var(--cds-text-02, #525252);
+}
+
+.bx--side-nav__link:hover,
+.bx--side-nav__submenu:hover,
+.bx--side-nav__item:not(.bx--side-nav__item--active) > .bx--side-nav__link:hover,
+.bx--side-nav__menu
+	a.bx--side-nav__link:not(.bx--side-nav__link--current):not([aria-current='page']):hover,
+.bx--side-nav a.bx--header__menu-item:hover,
+.bx--side-nav .bx--header__menu-title[aria-expanded='true']:hover {
+	background-color: var(--cds-hover-ui, #e5e5e5);
+	color: var(--cds-text-01, #161616);
+}
+
+.bx--side-nav__link:hover > span,
+.bx--side-nav__item:not(.bx--side-nav__item--active)
+	.bx--side-nav__menu-item
+	> .bx--side-nav__link:hover
+	> span {
+	color: var(--cds-text-01, #161616);
+}
+
+.bx--side-nav__link--current,
+.bx--side-nav__menu a.bx--side-nav__link[aria-current='page'],
+a.bx--side-nav__link--current {
+	background-color: var(--cds-selected-ui, #e0e0e0);
+}
+
+.bx--side-nav__link--current > span,
+.bx--side-nav__menu a.bx--side-nav__link[aria-current='page'] > span,
+a.bx--side-nav__link--current > span {
+	color: var(--cds-text-01, #161616);
+}
+
+.bx--side-nav__icon > svg {
+	fill: var(--cds-icon-02, #525252);
+}
+
+.bx--side-nav__submenu-chevron > svg {
+	fill: var(--cds-icon-02, #525252);
+}
+
+.bx--side-nav__divider {
+	background-color: var(--cds-ui-03, #e0e0e0);
+}

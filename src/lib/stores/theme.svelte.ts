@@ -53,13 +53,19 @@ function applyAccent(accentId: string) {
 		const accent = accentOptions.find((a) => a.id === accentId);
 		if (accent) {
 			const root = document.documentElement.style;
+			// Primary interactive color (buttons, links, focus rings)
+			root.setProperty('--cds-interactive-01', accent.color);
+			root.setProperty('--cds-interactive-04', accent.color);
+			root.setProperty('--cds-link-01', accent.color);
 			root.setProperty('--cds-link-primary', accent.color);
 			root.setProperty('--cds-link-primary-hover', accent.color);
-			root.setProperty('--cds-interactive', accent.color);
 			root.setProperty('--cds-focus', accent.color);
 			root.setProperty('--cds-border-interactive', accent.color);
-			root.setProperty('--cds-button-primary', accent.color);
+			root.setProperty('--cds-interactive', accent.color);
 			root.setProperty('--cds-background-brand', accent.color);
+			// Hover / active states for primary buttons
+			root.setProperty('--cds-hover-primary', accent.color);
+			root.setProperty('--cds-active-primary', accent.color);
 		}
 	}
 }

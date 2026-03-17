@@ -27,7 +27,9 @@
       "WebFetch(domain:github.com)",
       "Bash(mkcert --version)",
       "Bash(mkcert -install)",
-      "Bash(mkcert -key-file certs/key.pem -cert-file certs/cert.pem localhost 127.0.0.1 ::1)"
+      "Bash(mkcert -key-file certs/key.pem -cert-file certs/cert.pem localhost 127.0.0.1 ::1)",
+      "Bash(node:*)",
+      "Bash(python3:*)"
     ]
   }
 }
