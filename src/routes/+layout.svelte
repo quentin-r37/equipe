@@ -4,13 +4,22 @@
 	import 'carbon-components-svelte/css/all.css';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import { applyAccent, loadAccent } from '$lib/stores/theme.svelte';
-	import { onMount } from 'svelte';
+	import { applyAccent, loadAccent, themeState } from '$lib/stores/theme.svelte';
+	import { browser } from '$app/environment';
 
 	let { children } = $props();
 
-	onMount(() => {
-		applyAccent(loadAccent());
+	$effect(() => {
+		if (browser) {
+			applyAccent(loadAccent());
+		}
+	});
+
+	$effect(() => {
+		if (browser) {
+			document.documentElement.setAttribute('data-carbon-theme', themeState.current);
+			localStorage.setItem('theme', themeState.current);
+		}
 	});
 </script>
 

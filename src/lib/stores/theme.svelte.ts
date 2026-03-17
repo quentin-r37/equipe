@@ -1,5 +1,30 @@
 import { browser } from '$app/environment';
 
+export type CarbonTheme = 'white' | 'g10' | 'g80' | 'g90' | 'g100';
+
+const THEME_KEY = 'theme';
+
+export const themeOptions: { id: CarbonTheme; text: string }[] = [
+	{ id: 'white', text: 'White' },
+	{ id: 'g10', text: 'Gray 10' },
+	{ id: 'g80', text: 'Gray 80' },
+	{ id: 'g90', text: 'Gray 90' },
+	{ id: 'g100', text: 'Gray 100' }
+];
+
+function loadTheme(): CarbonTheme {
+	if (browser) {
+		return (localStorage.getItem(THEME_KEY) as CarbonTheme) || 'white';
+	}
+	return 'white';
+}
+
+class ThemeState {
+	current: CarbonTheme = $state(loadTheme());
+}
+
+export const themeState = new ThemeState();
+
 export const accentOptions = [
 	{ id: 'blue', text: 'Blue', color: '#0f62fe' },
 	{ id: 'teal', text: 'Teal', color: '#009d9a' },

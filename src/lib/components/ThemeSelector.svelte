@@ -1,7 +1,12 @@
 <script lang="ts">
-	import { Theme, Select, SelectItem } from 'carbon-components-svelte';
-	import type { CarbonTheme } from 'carbon-components-svelte/src/Theme/Theme.svelte';
-	import { accentOptions, applyAccent, loadAccent } from '$lib/stores/theme.svelte';
+	import { Select, SelectItem } from 'carbon-components-svelte';
+	import {
+		accentOptions,
+		applyAccent,
+		loadAccent,
+		themeState,
+		themeOptions
+	} from '$lib/stores/theme.svelte';
 
 	let selectedAccent = $state(loadAccent());
 
@@ -10,13 +15,13 @@
 	});
 </script>
 
-<div class="theme-selector">
-	<Theme render="select" persist persistKey="theme" />
-	<Select
-		labelText="Accent color"
-		size="sm"
-		bind:selected={selectedAccent}
-	>
+<div class="theme-selector" data-carbon-theme="g100">
+	<Select labelText="Theme" size="sm" bind:selected={themeState.current}>
+		{#each themeOptions as option (option.id)}
+			<SelectItem value={option.id} text={option.text} />
+		{/each}
+	</Select>
+	<Select labelText="Accent color" size="sm" bind:selected={selectedAccent}>
 		{#each accentOptions as option (option.id)}
 			<SelectItem value={option.id} text={option.text} />
 		{/each}
