@@ -5,7 +5,18 @@
 	import Download from 'carbon-icons-svelte/lib/Download.svelte';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import DocumentMultiple01 from 'carbon-icons-svelte/lib/DocumentMultiple_01.svelte';
+	import ImageIcon from 'carbon-icons-svelte/lib/Image.svelte';
+	import DocumentVideo from 'carbon-icons-svelte/lib/DocumentVideo.svelte';
+	import Music from 'carbon-icons-svelte/lib/Music.svelte';
+	import DocumentPdf from 'carbon-icons-svelte/lib/DocumentPdf.svelte';
+	import ZipReference from 'carbon-icons-svelte/lib/ZipReference.svelte';
+	import DocumentWordProcessor from 'carbon-icons-svelte/lib/DocumentWordProcessor.svelte';
+	import DataTable from 'carbon-icons-svelte/lib/DataTable.svelte';
+	import PresentationFile from 'carbon-icons-svelte/lib/PresentationFile.svelte';
+	import Code from 'carbon-icons-svelte/lib/Code.svelte';
+	import Document from 'carbon-icons-svelte/lib/Document.svelte';
 	import type { PageData } from './$types';
+	import type { Component } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -17,13 +28,20 @@
 		return `${(bytes / 1048576).toFixed(1)} MB`;
 	}
 
-	function mimeIcon(mime: string): string {
-		if (mime.startsWith('image/')) return '🖼';
-		if (mime.startsWith('video/')) return '🎬';
-		if (mime.startsWith('audio/')) return '🎵';
-		if (mime.includes('pdf')) return '📄';
-		if (mime.includes('zip') || mime.includes('tar') || mime.includes('gzip')) return '📦';
-		return '📎';
+	function mimeIcon(mime: string): Component {
+		if (mime.startsWith('image/')) return ImageIcon;
+		if (mime.startsWith('video/')) return DocumentVideo;
+		if (mime.startsWith('audio/')) return Music;
+		if (mime.includes('pdf')) return DocumentPdf;
+		if (mime.includes('zip') || mime.includes('tar') || mime.includes('gzip'))
+			return ZipReference;
+		if (mime.includes('word') || mime.includes('opendocument.text'))
+			return DocumentWordProcessor;
+		if (mime.includes('spreadsheet') || mime.includes('excel')) return DataTable;
+		if (mime.includes('presentation') || mime.includes('powerpoint')) return PresentationFile;
+		if (mime.includes('javascript') || mime.includes('json') || mime.includes('xml') || mime.includes('html') || mime.includes('css') || mime.includes('typescript'))
+			return Code;
+		return Document;
 	}
 </script>
 
@@ -43,10 +61,13 @@
 	{:else}
 		<div class="file-list">
 			{#each data.files as f (f.id)}
+				{@const Icon = mimeIcon(f.mimeType)}
 				<Tile>
 					<div class="file-row">
 						<div class="file-info">
-							<span class="file-icon">{mimeIcon(f.mimeType)}</span>
+							<span class="file-icon">
+								<Icon size={24} />
+							</span>
 							<div>
 								<p class="file-name">{f.name}</p>
 								<p class="file-meta">
@@ -153,7 +174,9 @@
 	}
 
 	.file-icon {
-		font-size: 1.5rem;
+		display: flex;
+		align-items: center;
+		color: var(--cds-icon-secondary);
 	}
 
 	.file-name {
