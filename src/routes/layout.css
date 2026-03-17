@@ -1,4 +1,4 @@
-/* Carbon Design System spacing and color tokens */
+/* Carbon Design System spacing tokens */
 :root {
 	/* Spacing scale */
 	--cds-spacing-01: 0.125rem;
@@ -11,16 +11,4 @@
 	--cds-spacing-08: 2.5rem;
 	--cds-spacing-09: 3rem;
 	--cds-spacing-10: 4rem;
-
-	/* Color tokens (White theme) */
-	--cds-text-secondary: #525252;
-	--cds-text-helper: #6f6f6f;
-	--cds-text-placeholder: #a8a8a8;
-	--cds-text-on-color: #fff;
-	--cds-link-primary: #0f62fe;
-	--cds-layer-01: #f4f4f4;
-	--cds-border-subtle: #e0e0e0;
-	--cds-background: #fff;
-	--cds-background-inverse: #393939;
-	--cds-icon-disabled: #c6c6c6;
 }

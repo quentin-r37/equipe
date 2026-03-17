@@ -20,7 +20,9 @@
 	import Logout from 'carbon-icons-svelte/lib/Logout.svelte';
 	import UserAvatar from 'carbon-icons-svelte/lib/UserAvatar.svelte';
 	import Settings from 'carbon-icons-svelte/lib/Settings.svelte';
+	import ColorPalette from 'carbon-icons-svelte/lib/ColorPalette.svelte';
 	import Logo from '$lib/components/Logo.svelte';
+	import ThemeSelector from '$lib/components/ThemeSelector.svelte';
 	import type { LayoutServerData } from './$types';
 
 	let { data, children }: { data: LayoutServerData; children: any } = $props();
@@ -36,6 +38,9 @@
 		Equipe
 	</svelte:fragment>
 	<HeaderUtilities>
+		<HeaderAction icon={ColorPalette} iconDescription="Theme">
+			<ThemeSelector />
+		</HeaderAction>
 		<HeaderGlobalAction aria-label={data.user.name || data.user.email} icon={UserAvatar} />
 		<HeaderGlobalAction
 			aria-label="Sign out"

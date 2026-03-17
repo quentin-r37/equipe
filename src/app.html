@@ -10,6 +10,27 @@
 	</head>
 
 	<body data-sveltekit-preload-data="hover">
+		<script>
+			(function() {
+				var t = localStorage.getItem('equipe-theme');
+				if (t) document.documentElement.setAttribute('theme', t);
+				var a = localStorage.getItem('equipe-accent');
+				if (a) {
+					var colors = { blue:'#0f62fe', teal:'#009d9a', purple:'#8a3ffc', magenta:'#ee5396', cyan:'#1192e8', green:'#198038' };
+					var c = colors[a];
+					if (c) {
+						var s = document.documentElement.style;
+						s.setProperty('--cds-link-primary', c);
+						s.setProperty('--cds-link-primary-hover', c);
+						s.setProperty('--cds-interactive', c);
+						s.setProperty('--cds-focus', c);
+						s.setProperty('--cds-border-interactive', c);
+						s.setProperty('--cds-button-primary', c);
+						s.setProperty('--cds-background-brand', c);
+					}
+				}
+			})();
+		</script>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>
