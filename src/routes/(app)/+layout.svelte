@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { browser } from '$app/environment';
 	import {
 		Header,
 		HeaderUtilities,
@@ -21,8 +22,12 @@
 	import UserAvatar from 'carbon-icons-svelte/lib/UserAvatar.svelte';
 	import Settings from 'carbon-icons-svelte/lib/Settings.svelte';
 	import ColorPalette from 'carbon-icons-svelte/lib/ColorPalette.svelte';
+	import NotificationIcon from 'carbon-icons-svelte/lib/Notification.svelte';
+	import NotificationNew from 'carbon-icons-svelte/lib/NotificationNew.svelte';
 	import Logo from '$lib/components/Logo.svelte';
 	import ThemeSelector from '$lib/components/ThemeSelector.svelte';
+	import NotificationToast from '$lib/components/NotificationToast.svelte';
+	import { notificationState } from '$lib/stores/notifications.svelte';
 	import type { LayoutServerData } from './$types';
 
 	let { data, children }: { data: LayoutServerData; children: any } = $props();
@@ -30,6 +35,22 @@
 	let isSideNavOpen = $state(false);
 
 	const pathname = $derived(page.url.pathname);
+	const hasUnread = $derived(notificationState.notifications.length > 0);
+
+	$effect(() => {
+		if (browser) {
+			notificationState.connect();
+			return () => notificationState.disconnect();
+		}
+	});
+
+	function handleNotificationBell() {
+		if (notificationState.permissionState === 'default') {
+			notificationState.requestPermission();
+		} else if (hasUnread) {
+			notificationState.clearAll();
+		}
+	}
 </script>
 
 <Header bind:isSideNavOpen href="/">
@@ -38,6 +59,11 @@
 		Equipe
 	</svelte:fragment>
 	<HeaderUtilities>
+		<HeaderGlobalAction
+			aria-label="Notifications"
+			icon={hasUnread ? NotificationNew : NotificationIcon}
+			onclick={handleNotificationBell}
+		/>
 		<HeaderAction icon={ColorPalette} iconDescription="Theme">
 			<ThemeSelector />
 		</HeaderAction>
@@ -105,6 +131,8 @@
 <Content>
 	{@render children()}
 </Content>
+
+<NotificationToast />
 
 <style>
 	.header-logo {

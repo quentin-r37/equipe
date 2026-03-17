@@ -1,9 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
-import { message, file, channel, teamMember } from '$lib/server/db/schema';
+import { message, file, channel, team, teamMember } from '$lib/server/db/schema';
 import { messageBus } from '$lib/server/messages';
 import type { ChatFile } from '$lib/server/messages';
+import { notificationBus } from '$lib/server/notifications';
 import { uploadFile, deleteFile as deleteStorageFile } from '$lib/server/seaweedfs';
 import { eq, and, desc } from 'drizzle-orm';
 
@@ -104,7 +105,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	const [ch] = await db
-		.select({ teamId: channel.teamId })
+		.select({ teamId: channel.teamId, channelName: channel.name })
 		.from(channel)
 		.where(eq(channel.id, channelId))
 		.limit(1);
@@ -117,6 +118,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		.where(and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, locals.user.id)))
 		.limit(1);
 	if (!membership) throw error(403, 'Not a member of this team');
+
+	const [teamRow] = await db
+		.select({ name: team.name })
+		.from(team)
+		.where(eq(team.id, ch.teamId))
+		.limit(1);
 
 	const [inserted] = await db
 		.insert(message)
@@ -169,6 +176,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	};
 
 	messageBus.publish(channelId, chatMessage);
+
+	notificationBus.publish(ch.teamId, {
+		id: crypto.randomUUID(),
+		type: chatFiles.length > 0 && !content?.trim() ? 'new_file' : 'new_message',
+		teamId: ch.teamId,
+		teamName: teamRow?.name ?? '',
+		channelId,
+		channelName: ch.channelName,
+		userId: locals.user.id,
+		userName: locals.user.name,
+		preview: content?.trim()
+			? content.trim().slice(0, 100)
+			: chatFiles.map((f) => f.name).join(', '),
+		createdAt: inserted.createdAt.toISOString()
+	});
 
 	return json(chatMessage, { status: 201 });
 };

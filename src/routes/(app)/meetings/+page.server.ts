@@ -1,7 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { meeting, teamMember } from '$lib/server/db/schema';
+import { meeting, team, teamMember } from '$lib/server/db/schema';
+import { notificationBus } from '$lib/server/notifications';
 import { eq, desc } from 'drizzle-orm';
 
 export const load: PageServerLoad = async (event) => {
@@ -37,6 +38,25 @@ export const actions: Actions = {
 				createdBy: event.locals.user.id
 			})
 			.returning();
+
+		const [teamRow] = await db
+			.select({ name: team.name })
+			.from(team)
+			.where(eq(team.id, teamId))
+			.limit(1);
+
+		notificationBus.publish(teamId, {
+			id: crypto.randomUUID(),
+			type: 'new_meeting',
+			teamId,
+			teamName: teamRow?.name ?? '',
+			meetingId: newMeeting.id,
+			meetingTitle: title,
+			userId: event.locals.user.id,
+			userName: event.locals.user.name,
+			preview: title,
+			createdAt: newMeeting.createdAt.toISOString()
+		});
 
 		throw redirect(302, `/meetings/${newMeeting.id}`);
 	},
