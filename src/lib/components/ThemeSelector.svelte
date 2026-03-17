@@ -1,37 +1,26 @@
 <script lang="ts">
-	import { Dropdown } from 'carbon-components-svelte';
-	import { themeStore, themeOptions, accentOptions } from '$lib/stores/theme.svelte';
-	import type { CarbonTheme } from '$lib/stores/theme.svelte';
+	import { Theme, Select, SelectItem } from 'carbon-components-svelte';
+	import type { CarbonTheme } from 'carbon-components-svelte/src/Theme/Theme.svelte';
+	import { accentOptions, applyAccent, loadAccent } from '$lib/stores/theme.svelte';
 
-	let selectedTheme = $state(themeStore.theme);
-	let selectedAccent = $state(themeStore.accent);
-
-	$effect(() => {
-		themeStore.theme = selectedTheme as CarbonTheme;
-	});
+	let selectedAccent = $state(loadAccent());
 
 	$effect(() => {
-		themeStore.accent = selectedAccent;
+		applyAccent(selectedAccent);
 	});
 </script>
 
 <div class="theme-selector">
-	<div class="theme-selector__field">
-		<Dropdown
-			labelText="Theme"
-			size="sm"
-			items={themeOptions}
-			bind:selectedId={selectedTheme}
-		/>
-	</div>
-	<div class="theme-selector__field">
-		<Dropdown
-			labelText="Accent color"
-			size="sm"
-			items={accentOptions}
-			bind:selectedId={selectedAccent}
-		/>
-	</div>
+	<Theme render="select" persist persistKey="theme" />
+	<Select
+		labelText="Accent color"
+		size="sm"
+		bind:selected={selectedAccent}
+	>
+		{#each accentOptions as option (option.id)}
+			<SelectItem value={option.id} text={option.text} />
+		{/each}
+	</Select>
 </div>
 
 <style>
@@ -42,7 +31,8 @@
 		gap: var(--cds-spacing-05);
 	}
 
-	.theme-selector__field {
+	.theme-selector :global(.bx--select),
+	.theme-selector :global(.bx--form-item) {
 		width: 100%;
 	}
 </style>

@@ -15,28 +15,52 @@
 
 /*
  * SideNav theme overrides — Carbon's compiled CSS hardcodes light-theme colors
- * for the sidebar. These rules make them follow the active Carbon theme.
+ * for the sidebar. We use !important to guarantee these win regardless of
+ * bundler CSS ordering.
  */
+
+/* Base background & text */
 .bx--side-nav {
-	background-color: var(--cds-ui-background, #fff);
-	color: var(--cds-text-02, #525252);
+	background-color: var(--cds-ui-background, #fff) !important;
+	color: var(--cds-text-02, #525252) !important;
 }
 
+.bx--side-nav__footer {
+	background-color: var(--cds-ui-background, #fff) !important;
+}
+
+/* Text colors */
 .bx--side-nav__link > .bx--side-nav__link-text,
 .bx--side-nav__submenu,
+.bx--side-nav__submenu-title,
+.bx--side-nav a.bx--header__menu-item,
 .bx--side-nav a.bx--header__menu-item .bx--text-truncate-end {
-	color: var(--cds-text-02, #525252);
+	color: var(--cds-text-02, #525252) !important;
 }
 
+/* Icons */
+.bx--side-nav__icon > svg,
+.bx--side-nav__submenu-chevron > svg,
+.bx--side-nav__switcher-chevron,
+.bx--side-nav a.bx--header__menu-item:hover .bx--header__menu-arrow,
+.bx--side-nav a.bx--header__menu-item:focus .bx--header__menu-arrow,
+.bx--side-nav .bx--header__menu-arrow {
+	fill: var(--cds-icon-02, #525252) !important;
+}
+
+/* Hover states */
 .bx--side-nav__link:hover,
 .bx--side-nav__submenu:hover,
 .bx--side-nav__item:not(.bx--side-nav__item--active) > .bx--side-nav__link:hover,
+.bx--side-nav__item:not(.bx--side-nav__item--active) > .bx--side-nav__submenu:hover,
+.bx--side-nav__item--active .bx--side-nav__submenu:hover,
 .bx--side-nav__menu
 	a.bx--side-nav__link:not(.bx--side-nav__link--current):not([aria-current='page']):hover,
 .bx--side-nav a.bx--header__menu-item:hover,
-.bx--side-nav .bx--header__menu-title[aria-expanded='true']:hover {
-	background-color: var(--cds-hover-ui, #e5e5e5);
-	color: var(--cds-text-01, #161616);
+.bx--side-nav .bx--header__menu-title[aria-expanded='true']:hover,
+.bx--side-nav .bx--header__menu-title[aria-expanded='true'] + .bx--header__menu a.bx--header__menu-item:hover {
+	background-color: var(--cds-hover-ui, #e5e5e5) !important;
+	color: var(--cds-text-01, #161616) !important;
 }
 
 .bx--side-nav__link:hover > span,
@@ -44,29 +68,52 @@
 	.bx--side-nav__menu-item
 	> .bx--side-nav__link:hover
 	> span {
-	color: var(--cds-text-01, #161616);
+	color: var(--cds-text-01, #161616) !important;
+}
+
+/* Active / current states */
+.bx--side-nav__item--active .bx--side-nav__submenu[aria-expanded='false'] {
+	background-color: var(--cds-hover-ui, #e5e5e5) !important;
+	color: var(--cds-text-01, #161616) !important;
+}
+
+.bx--side-nav__item--active .bx--side-nav__submenu[aria-expanded='false']::before,
+.bx--side-nav__link[aria-current='page']::before,
+a.bx--side-nav__link--current::before {
+	background-color: var(--cds-interactive-01, #0f62fe) !important;
+}
+
+.bx--side-nav__item--active .bx--side-nav__submenu-title {
+	color: var(--cds-text-01, #161616) !important;
 }
 
 .bx--side-nav__link--current,
+.bx--side-nav__link[aria-current='page'],
+.bx--side-nav__menu a.bx--side-nav__link--current,
 .bx--side-nav__menu a.bx--side-nav__link[aria-current='page'],
 a.bx--side-nav__link--current {
-	background-color: var(--cds-selected-ui, #e0e0e0);
+	background-color: var(--cds-selected-ui, #e0e0e0) !important;
 }
 
 .bx--side-nav__link--current > span,
+.bx--side-nav__link[aria-current='page'] > span,
+.bx--side-nav__link[aria-current='page'] .bx--side-nav__link-text,
+.bx--side-nav__menu a.bx--side-nav__link--current > span,
 .bx--side-nav__menu a.bx--side-nav__link[aria-current='page'] > span,
-a.bx--side-nav__link--current > span {
-	color: var(--cds-text-01, #161616);
+a.bx--side-nav__link--current > span,
+a.bx--side-nav__link--current .bx--side-nav__link-text {
+	color: var(--cds-text-01, #161616) !important;
 }
 
-.bx--side-nav__icon > svg {
-	fill: var(--cds-icon-02, #525252);
-}
-
-.bx--side-nav__submenu-chevron > svg {
-	fill: var(--cds-icon-02, #525252);
-}
-
+/* Dividers & borders */
 .bx--side-nav__divider {
-	background-color: var(--cds-ui-03, #e0e0e0);
+	background-color: var(--cds-ui-03, #e0e0e0) !important;
+}
+
+.bx--side-nav__header {
+	border-bottom-color: var(--cds-ui-03, #393939) !important;
+}
+
+.bx--side-nav__header-divider::after {
+	background: var(--cds-ui-03, #e0e0e0) !important;
 }

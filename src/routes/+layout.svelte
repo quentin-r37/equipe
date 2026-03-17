@@ -4,13 +4,13 @@
 	import 'carbon-components-svelte/css/all.css';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import { themeStore } from '$lib/stores/theme.svelte';
+	import { applyAccent, loadAccent } from '$lib/stores/theme.svelte';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
 
 	onMount(() => {
-		themeStore.init();
+		applyAccent(loadAccent());
 	});
 </script>
 
