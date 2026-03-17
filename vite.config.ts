@@ -3,12 +3,14 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
 
+const httpsConfig =
+	fs.existsSync('certs/key.pem') && fs.existsSync('certs/cert.pem')
+		? { key: fs.readFileSync('certs/key.pem'), cert: fs.readFileSync('certs/cert.pem') }
+		: undefined;
+
 export default defineConfig({
 	server: {
-		https: {
-			key: fs.readFileSync('certs/key.pem'),
-			cert: fs.readFileSync('certs/cert.pem')
-		}
+		https: httpsConfig
 	},
 	plugins: [
 		sveltekit(),

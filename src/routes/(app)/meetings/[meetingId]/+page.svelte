@@ -7,9 +7,13 @@
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
 	import VideoOff from 'carbon-icons-svelte/lib/VideoOff.svelte';
 	import PhoneBlockFilled from 'carbon-icons-svelte/lib/PhoneBlockFilled.svelte';
+	import Chat from 'carbon-icons-svelte/lib/Chat.svelte';
+	import MeetingChat from '$lib/components/MeetingChat.svelte';
 	import type { PageServerData } from './$types';
 
 	let { data }: { data: PageServerData } = $props();
+
+	let chatOpen = $state(false);
 
 	let videoGrid: HTMLDivElement | undefined = $state();
 	let localVideoEl: HTMLVideoElement | undefined = $state();
@@ -103,72 +107,96 @@
 	});
 </script>
 
-<div class="meeting-container">
-	<div class="meeting-header">
-		<div>
-			<h2>{data.meeting.title}</h2>
-			<div class="meeting-info">
-				<Tag type={data.meeting.status === 'active' ? 'green' : 'gray'}>
-					{data.meeting.status}
-				</Tag>
-				<span class="participant-count">
-					{participants.length} participant{participants.length !== 1 ? 's' : ''}
-				</span>
+<div class="meeting-wrapper">
+	<div class="meeting-container">
+		<div class="meeting-header">
+			<div>
+				<h2>{data.meeting.title}</h2>
+				<div class="meeting-info">
+					<Tag type={data.meeting.status === 'active' ? 'green' : 'gray'}>
+						{data.meeting.status}
+					</Tag>
+					<span class="participant-count">
+						{participants.length} participant{participants.length !== 1 ? 's' : ''}
+					</span>
+				</div>
 			</div>
+		</div>
+
+		{#if errorMsg}
+			<div class="error-notice">
+				<InlineNotification kind="error" title="Connection Error" subtitle={errorMsg} />
+			</div>
+		{/if}
+
+		<div class="video-area">
+			<div bind:this={videoGrid} class="video-grid">
+				<div class="video-tile">
+					<video
+						bind:this={localVideoEl}
+						autoplay
+						muted
+						playsinline
+						class="video-element"
+						style="transform: scaleX(-1)"
+					></video>
+					<span class="video-label">You</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="controls">
+			<Button
+				kind={micEnabled ? 'secondary' : 'danger'}
+				icon={micEnabled ? Microphone : MicrophoneOff}
+				iconDescription={micEnabled ? 'Mute' : 'Unmute'}
+				on:click={toggleMic}
+			/>
+			<Button
+				kind={camEnabled ? 'secondary' : 'danger'}
+				icon={camEnabled ? VideoChat : VideoOff}
+				iconDescription={camEnabled ? 'Camera off' : 'Camera on'}
+				on:click={toggleCam}
+			/>
+			{#if data.teamChannels.length > 0}
+				<Button
+					kind={chatOpen ? 'primary' : 'secondary'}
+					icon={Chat}
+					iconDescription={chatOpen ? 'Close chat' : 'Open chat'}
+					on:click={() => (chatOpen = !chatOpen)}
+				/>
+			{/if}
+			<Button
+				kind="danger"
+				icon={PhoneBlockFilled}
+				iconDescription="Leave meeting"
+				on:click={leaveMeeting}
+			>
+				Leave
+			</Button>
 		</div>
 	</div>
 
-	{#if errorMsg}
-		<div class="error-notice">
-			<InlineNotification kind="error" title="Connection Error" subtitle={errorMsg} />
-		</div>
+	{#if chatOpen && data.teamChannels.length > 0}
+		<MeetingChat
+			channels={data.teamChannels}
+			userId={data.userId}
+			onclose={() => (chatOpen = false)}
+		/>
 	{/if}
-
-	<div class="video-area">
-		<div bind:this={videoGrid} class="video-grid">
-			<div class="video-tile">
-				<video
-					bind:this={localVideoEl}
-					autoplay
-					muted
-					playsinline
-					class="video-element"
-					style="transform: scaleX(-1)"
-				></video>
-				<span class="video-label">You</span>
-			</div>
-		</div>
-	</div>
-
-	<div class="controls">
-		<Button
-			kind={micEnabled ? 'secondary' : 'danger'}
-			icon={micEnabled ? Microphone : MicrophoneOff}
-			iconDescription={micEnabled ? 'Mute' : 'Unmute'}
-			on:click={toggleMic}
-		/>
-		<Button
-			kind={camEnabled ? 'secondary' : 'danger'}
-			icon={camEnabled ? VideoChat : VideoOff}
-			iconDescription={camEnabled ? 'Camera off' : 'Camera on'}
-			on:click={toggleCam}
-		/>
-		<Button
-			kind="danger"
-			icon={PhoneBlockFilled}
-			iconDescription="Leave meeting"
-			on:click={leaveMeeting}
-		>
-			Leave
-		</Button>
-	</div>
 </div>
 
 <style>
+	.meeting-wrapper {
+		display: flex;
+		height: calc(100vh - 7rem);
+	}
+
 	.meeting-container {
 		display: flex;
 		flex-direction: column;
-		height: calc(100vh - 7rem);
+		flex: 1;
+		min-width: 0;
 	}
 
 	.meeting-header {

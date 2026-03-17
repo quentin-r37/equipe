@@ -1,7 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { meeting } from '$lib/server/db/schema';
+import { meeting, channel } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { createRoomToken } from '$lib/server/livekit';
 import { env } from '$env/dynamic/private';
@@ -20,9 +20,16 @@ export const load: PageServerLoad = async (event) => {
 		event.locals.user.id
 	);
 
+	const teamChannels = await db
+		.select({ id: channel.id, name: channel.name })
+		.from(channel)
+		.where(eq(channel.teamId, m.teamId));
+
 	return {
 		meeting: { ...m, createdAt: m.createdAt.toISOString() },
 		livekitUrl: env.LIVEKIT_URL || 'ws://localhost:7880',
-		token
+		token,
+		teamChannels,
+		userId: event.locals.user.id
 	};
 };

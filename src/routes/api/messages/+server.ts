@@ -5,7 +5,78 @@ import { message, file, channel, teamMember } from '$lib/server/db/schema';
 import { messageBus } from '$lib/server/messages';
 import type { ChatFile } from '$lib/server/messages';
 import { uploadFile, deleteFile as deleteStorageFile } from '$lib/server/seaweedfs';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
+
+export const GET: RequestHandler = async ({ url, locals }) => {
+	if (!locals.user) throw error(401, 'Not authenticated');
+
+	const channelId = url.searchParams.get('channelId');
+	if (!channelId) throw error(400, 'channelId is required');
+
+	const [ch] = await db
+		.select({ teamId: channel.teamId })
+		.from(channel)
+		.where(eq(channel.id, channelId))
+		.limit(1);
+	if (!ch) throw error(404, 'Channel not found');
+
+	const [membership] = await db
+		.select()
+		.from(teamMember)
+		.where(and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, locals.user.id)))
+		.limit(1);
+	if (!membership) throw error(403, 'Not a member of this team');
+
+	const messages = await db
+		.select()
+		.from(message)
+		.where(eq(message.channelId, channelId))
+		.orderBy(desc(message.createdAt))
+		.limit(50);
+
+	const messageIds = messages.map((m) => m.id);
+	const filesByMessage: Record<
+		string,
+		{ id: string; name: string; size: number; mimeType: string }[]
+	> = {};
+
+	if (messageIds.length > 0) {
+		const files = await db
+			.select({
+				id: file.id,
+				messageId: file.messageId,
+				name: file.name,
+				size: file.size,
+				mimeType: file.mimeType
+			})
+			.from(file)
+			.where(eq(file.channelId, channelId));
+
+		for (const f of files) {
+			if (f.messageId) {
+				if (!filesByMessage[f.messageId]) filesByMessage[f.messageId] = [];
+				filesByMessage[f.messageId].push({
+					id: f.id,
+					name: f.name,
+					size: f.size,
+					mimeType: f.mimeType
+				});
+			}
+		}
+	}
+
+	return json(
+		messages.reverse().map((m) => ({
+			id: m.id,
+			channelId: m.channelId,
+			userId: m.userId,
+			userName: m.userName,
+			content: m.content,
+			createdAt: m.createdAt.toISOString(),
+			files: filesByMessage[m.id] || undefined
+		}))
+	);
+};
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) throw error(401, 'Not authenticated');
