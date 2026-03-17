@@ -24,7 +24,10 @@
       "Bash(git:*)",
       "Bash(npx drizzle-kit:*)",
       "WebSearch",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(mkcert --version)",
+      "Bash(mkcert -install)",
+      "Bash(mkcert -key-file certs/key.pem -cert-file certs/cert.pem localhost 127.0.0.1 ::1)"
     ]
   }
 }

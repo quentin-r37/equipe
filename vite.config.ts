@@ -1,8 +1,15 @@
+import fs from 'node:fs';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
+	server: {
+		https: {
+			key: fs.readFileSync('certs/key.pem'),
+			cert: fs.readFileSync('certs/cert.pem')
+		}
+	},
 	plugins: [
 		sveltekit(),
 		paraglideVitePlugin({ project: './project.inlang', outdir: './src/lib/paraglide' })

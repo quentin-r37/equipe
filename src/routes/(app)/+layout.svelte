@@ -36,7 +36,7 @@
 		Equipe
 	</svelte:fragment>
 	<HeaderUtilities>
-		<HeaderGlobalAction aria-label={data.user.name} icon={UserAvatar} />
+		<HeaderGlobalAction aria-label={data.user.name || data.user.email} icon={UserAvatar} />
 		<HeaderGlobalAction
 			aria-label="Sign out"
 			icon={Logout}

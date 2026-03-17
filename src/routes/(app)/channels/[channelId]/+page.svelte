@@ -297,12 +297,16 @@
 		{:else}
 			{#each messages as msg (msg.id)}
 				<div class="message" class:own={isOwn(msg)}>
-					<div class="avatar">
-						{msg.userName.charAt(0).toUpperCase()}
-					</div>
-					<div class="message-body">
+					{#if !isOwn(msg)}
+						<div class="avatar">
+							{msg.userName.charAt(0).toUpperCase()}
+						</div>
+					{/if}
+					<div class="message-bubble">
 						<div class="message-meta">
-							<span class="author">{msg.userName}</span>
+							{#if !isOwn(msg)}
+								<span class="author">{msg.userName}</span>
+							{/if}
 							<span class="time">{formatTime(msg.createdAt)}</span>
 							{#if isOwn(msg)}
 								<div class="message-actions">
@@ -408,6 +412,11 @@
 							</div>
 						{/if}
 					</div>
+					{#if isOwn(msg)}
+						<div class="avatar">
+							{msg.userName.charAt(0).toUpperCase()}
+						</div>
+					{/if}
 				</div>
 			{/each}
 		{/if}
@@ -509,8 +518,14 @@
 
 	.message {
 		display: flex;
-		gap: var(--cds-spacing-05);
-		margin-bottom: var(--cds-spacing-05);
+		gap: var(--cds-spacing-03);
+		margin-bottom: var(--cds-spacing-04);
+		align-items: flex-end;
+		max-width: 100%;
+	}
+
+	.message.own {
+		justify-content: flex-end;
 	}
 
 	.avatar {
@@ -527,9 +542,24 @@
 		font-weight: 700;
 	}
 
-	.message-body {
+	.message-bubble {
 		min-width: 0;
-		flex: 1;
+		max-width: 70%;
+		padding: var(--cds-spacing-03) var(--cds-spacing-04);
+		border-radius: 12px;
+		background: var(--cds-layer-01);
+		border: 1px solid var(--cds-border-subtle);
+	}
+
+	.message.own .message-bubble {
+		background: var(--cds-link-primary);
+		color: var(--cds-text-on-color);
+		border-color: transparent;
+		border-bottom-right-radius: 4px;
+	}
+
+	.message:not(.own) .message-bubble {
+		border-bottom-left-radius: 4px;
 	}
 
 	.message-meta {
@@ -540,15 +570,22 @@
 
 	.author {
 		font-weight: 600;
+		font-size: 0.8125rem;
 	}
 
 	.time {
-		font-size: 0.75rem;
+		font-size: 0.6875rem;
 		color: var(--cds-text-placeholder);
+	}
+
+	.message.own .time {
+		color: rgba(255, 255, 255, 0.7);
 	}
 
 	.message-text {
 		margin-top: var(--cds-spacing-01);
+		word-wrap: break-word;
+		overflow-wrap: break-word;
 	}
 
 	/* ── Message actions (edit/delete) ── */
@@ -571,18 +608,18 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		color: var(--cds-text-secondary);
+		color: rgba(255, 255, 255, 0.7);
 		padding: 4px;
 		border-radius: 4px;
 	}
 
 	.action-btn:hover {
-		background: var(--cds-layer-hover-01);
-		color: var(--cds-text-primary);
+		background: rgba(255, 255, 255, 0.15);
+		color: #fff;
 	}
 
 	.action-btn.danger:hover {
-		color: var(--cds-support-error);
+		color: #ff8389;
 	}
 
 	/* ── Edit row ── */
@@ -636,6 +673,17 @@
 		background: var(--cds-layer-hover-01);
 	}
 
+	.message.own .file-remove-btn {
+		background: rgba(255, 255, 255, 0.2);
+		border-color: rgba(255, 255, 255, 0.3);
+		color: #fff;
+	}
+
+	.message.own .file-remove-btn:hover {
+		color: #ff8389;
+		background: rgba(255, 255, 255, 0.3);
+	}
+
 	.image-preview {
 		display: block;
 	}
@@ -682,6 +730,24 @@
 
 	.file-attachment:hover {
 		background: var(--cds-layer-hover-01);
+	}
+
+	.message.own .file-attachment {
+		background: rgba(255, 255, 255, 0.15);
+		border-color: rgba(255, 255, 255, 0.3);
+		color: #fff;
+	}
+
+	.message.own .file-attachment:hover {
+		background: rgba(255, 255, 255, 0.25);
+	}
+
+	.message.own .file-size {
+		color: rgba(255, 255, 255, 0.7);
+	}
+
+	.message.own .audio-attachment {
+		color: #fff;
 	}
 
 	.file-name {
