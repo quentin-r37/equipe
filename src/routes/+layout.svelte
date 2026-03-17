@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { locales, localizeHref } from '$lib/paraglide/runtime';
+	import { Theme } from 'carbon-components-svelte';
 	import 'carbon-components-svelte/css/all.css';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
@@ -17,11 +18,12 @@
 
 	$effect(() => {
 		if (browser) {
-			document.documentElement.setAttribute('data-carbon-theme', themeState.current);
 			localStorage.setItem('theme', themeState.current);
 		}
 	});
 </script>
+
+<Theme theme={themeState.current} />
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 {@render children()}
