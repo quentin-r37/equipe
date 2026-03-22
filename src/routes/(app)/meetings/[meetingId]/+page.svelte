@@ -8,6 +8,8 @@
 	import VideoOff from 'carbon-icons-svelte/lib/VideoOff.svelte';
 	import PhoneBlockFilled from 'carbon-icons-svelte/lib/PhoneBlockFilled.svelte';
 	import Chat from 'carbon-icons-svelte/lib/Chat.svelte';
+	import Screen from 'carbon-icons-svelte/lib/Screen.svelte';
+	import ScreenOff from 'carbon-icons-svelte/lib/ScreenOff.svelte';
 	import MeetingChat from '$lib/components/MeetingChat.svelte';
 	import type { PageServerData } from './$types';
 
@@ -23,10 +25,15 @@
 	let camEnabled = $state(true);
 	let participants = $state<string[]>([]);
 	let errorMsg = $state('');
+	let screenShareEnabled = $state(false);
+	let screenShareParticipant = $state<string | null>(null);
+	let screenShareVideoEl: HTMLDivElement | undefined = $state();
+	let TrackRef: any;
 
 	onMount(async () => {
 		try {
 			const { Room, RoomEvent, Track } = await import('livekit-client');
+			TrackRef = Track;
 
 			room = new Room();
 
@@ -36,16 +43,32 @@
 					el.style.width = '100%';
 					el.style.borderRadius = '8px';
 					el.dataset.participantId = participant.identity;
-					videoGrid?.appendChild(el);
+
+					if (publication.source === Track.Source.ScreenShare) {
+						el.style.objectFit = 'contain';
+						screenShareParticipant = participant.identity;
+						screenShareVideoEl
+							?.querySelectorAll('video')
+							.forEach((v: Element) => v.remove());
+						screenShareVideoEl?.appendChild(el);
+					} else {
+						videoGrid?.appendChild(el);
+					}
 				} else if (track.kind === Track.Kind.Audio) {
 					const el = track.attach();
 					el.style.display = 'none';
-					videoGrid?.appendChild(el);
+					document.body.appendChild(el);
 				}
 			});
 
-			room.on(RoomEvent.TrackUnsubscribed, (track: any) => {
+			room.on(RoomEvent.TrackUnsubscribed, (track: any, publication: any, participant: any) => {
 				track.detach().forEach((el: HTMLElement) => el.remove());
+				if (
+					publication.source === Track.Source.ScreenShare &&
+					screenShareParticipant === participant.identity
+				) {
+					screenShareParticipant = null;
+				}
 			});
 
 			room.on(RoomEvent.ParticipantConnected, () => {
@@ -58,6 +81,33 @@
 
 			room.on(RoomEvent.Disconnected, () => {
 				connected = false;
+				screenShareEnabled = false;
+				screenShareParticipant = null;
+			});
+
+			room.on(RoomEvent.LocalTrackUnpublished, (publication: any) => {
+				if (publication.source === Track.Source.ScreenShare) {
+					screenShareEnabled = false;
+					screenShareParticipant = null;
+					screenShareVideoEl
+						?.querySelectorAll('video')
+						.forEach((el: Element) => el.remove());
+				}
+			});
+
+			room.on(RoomEvent.TrackPublished, (publication: any, participant: any) => {
+				if (publication.source === Track.Source.ScreenShare) {
+					screenShareParticipant = participant.identity;
+				}
+			});
+
+			room.on(RoomEvent.TrackUnpublished, (publication: any, participant: any) => {
+				if (
+					publication.source === Track.Source.ScreenShare &&
+					screenShareParticipant === participant.identity
+				) {
+					screenShareParticipant = null;
+				}
 			});
 
 			await room.connect(data.livekitUrl, data.token);
@@ -71,6 +121,15 @@
 			}
 
 			updateParticipants();
+
+			// Check for existing screen shares from remote participants
+			for (const p of room.remoteParticipants.values()) {
+				const screenPub = p.getTrackPublication(Track.Source.ScreenShare);
+				if (screenPub && screenPub.isSubscribed && screenPub.track) {
+					screenShareParticipant = p.identity;
+					break;
+				}
+			}
 		} catch (err: any) {
 			errorMsg = err.message || 'Failed to connect to meeting';
 		}
@@ -96,6 +155,62 @@
 		await room.localParticipant.setCameraEnabled(!camEnabled);
 		camEnabled = !camEnabled;
 	}
+
+	async function toggleScreenShare() {
+		if (!room) return;
+
+		if (
+			!screenShareEnabled &&
+			screenShareParticipant &&
+			screenShareParticipant !== room.localParticipant.identity
+		) {
+			errorMsg = `${getParticipantName(screenShareParticipant)} is already sharing their screen`;
+			setTimeout(() => {
+				if (errorMsg.includes('already sharing')) errorMsg = '';
+			}, 4000);
+			return;
+		}
+
+		try {
+			if (!screenShareEnabled) {
+				await room.localParticipant.setScreenShareEnabled(true, { audio: true });
+				screenShareEnabled = true;
+				screenShareParticipant = room.localParticipant.identity;
+			} else {
+				await room.localParticipant.setScreenShareEnabled(false);
+				screenShareEnabled = false;
+				screenShareParticipant = null;
+				screenShareVideoEl
+					?.querySelectorAll('video')
+					.forEach((el: Element) => el.remove());
+			}
+		} catch (err: any) {
+			if (err.name === 'NotAllowedError') return;
+			errorMsg = err.message || 'Failed to share screen';
+		}
+	}
+
+	function getParticipantName(identity: string): string {
+		if (identity === room?.localParticipant?.identity) return 'You';
+		const remote = room?.remoteParticipants?.get(identity);
+		return remote?.name || remote?.identity || 'Someone';
+	}
+
+	$effect(() => {
+		if (screenShareParticipant && screenShareVideoEl && room && TrackRef) {
+			if (screenShareParticipant === room.localParticipant.identity) {
+				const screenTrack =
+					room.localParticipant.getTrackPublication(TrackRef.Source.ScreenShare)?.track;
+				if (screenTrack && !screenShareVideoEl.querySelector('video')) {
+					const el = screenTrack.attach();
+					el.style.width = '100%';
+					el.style.objectFit = 'contain';
+					el.style.borderRadius = '8px';
+					screenShareVideoEl.appendChild(el);
+				}
+			}
+		}
+	});
 
 	async function leaveMeeting() {
 		room?.disconnect();
@@ -129,7 +244,15 @@
 			</div>
 		{/if}
 
-		<div class="video-area">
+		<div class="video-area" class:presenter-mode={screenShareParticipant !== null}>
+			{#if screenShareParticipant !== null}
+				<div class="screen-share-main" bind:this={screenShareVideoEl}>
+					<span class="video-label screen-share-label">
+						{getParticipantName(screenShareParticipant)}'s screen
+					</span>
+				</div>
+			{/if}
+
 			<div bind:this={videoGrid} class="video-grid">
 				<div class="video-tile">
 					<video
@@ -157,6 +280,13 @@
 				icon={camEnabled ? VideoChat : VideoOff}
 				iconDescription={camEnabled ? 'Camera off' : 'Camera on'}
 				on:click={toggleCam}
+			/>
+			<Button
+				kind={screenShareEnabled ? 'danger' : 'secondary'}
+				icon={screenShareEnabled ? ScreenOff : Screen}
+				iconDescription={screenShareEnabled ? 'Stop sharing' : 'Share screen'}
+				on:click={toggleScreenShare}
+				disabled={!connected}
 			/>
 			{#if data.teamChannels.length > 0}
 				<Button
@@ -272,6 +402,59 @@
 		border-top: 1px solid var(--cds-border-subtle);
 	}
 
+	/* ── Presenter mode (screen share active) ── */
+	.video-area.presenter-mode {
+		display: flex;
+		gap: var(--cds-spacing-05);
+	}
+
+	.screen-share-main {
+		position: relative;
+		flex: 1;
+		min-width: 0;
+		background: var(--cds-background-inverse);
+		border-radius: 8px;
+		overflow: hidden;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.screen-share-main :global(video) {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+	}
+
+	.screen-share-label {
+		z-index: 1;
+	}
+
+	.video-area.presenter-mode .video-grid {
+		display: flex;
+		flex-direction: column;
+		gap: var(--cds-spacing-03);
+		width: 200px;
+		min-width: 200px;
+		height: 100%;
+		overflow-y: auto;
+		grid-template-columns: unset;
+	}
+
+	.video-area.presenter-mode .video-grid .video-tile {
+		width: 100%;
+		height: auto;
+		aspect-ratio: 16 / 9;
+		flex-shrink: 0;
+	}
+
+	.video-area.presenter-mode .video-grid :global(video) {
+		width: 100%;
+		border-radius: 8px;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+	}
+
 	/* ── Chat panel (desktop: sidebar) ── */
 	.chat-panel {
 		display: flex;
@@ -306,6 +489,27 @@
 		.controls {
 			gap: var(--cds-spacing-03);
 			padding: var(--cds-spacing-03) 0;
+		}
+
+		/* Presenter mode on mobile */
+		.video-area.presenter-mode {
+			flex-direction: column;
+		}
+
+		.video-area.presenter-mode .video-grid {
+			flex-direction: row;
+			width: 100%;
+			min-width: unset;
+			height: 80px;
+			overflow-x: auto;
+			overflow-y: hidden;
+		}
+
+		.video-area.presenter-mode .video-grid .video-tile {
+			width: 120px;
+			min-width: 120px;
+			height: 100%;
+			aspect-ratio: unset;
 		}
 
 		/* When chat is open on mobile: hide video, show chat full-width */
