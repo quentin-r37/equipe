@@ -1,8 +1,10 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { team, teamMember, channel, meeting, user } from '$lib/server/db/schema';
-import { eq, and, count } from 'drizzle-orm';
+import { team, teamMember, teamInvitation, channel, meeting, user } from '$lib/server/db/schema';
+import { eq, and, count, gt } from 'drizzle-orm';
+import { env } from '$env/dynamic/private';
+import { sendEmail, invitationEmailHtml } from '$lib/server/email';
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) throw redirect(302, '/login');
@@ -48,6 +50,31 @@ export const load: PageServerLoad = async (event) => {
 		.from(meeting)
 		.where(eq(meeting.teamId, teamId));
 
+	// Get pending invitations (owner/admin only)
+	let pendingInvitations: {
+		id: string;
+		email: string;
+		role: string;
+		createdAt: string;
+	}[] = [];
+
+	if (membership.role === 'owner' || membership.role === 'admin') {
+		const invitations = await db
+			.select({
+				id: teamInvitation.id,
+				email: teamInvitation.email,
+				role: teamInvitation.role,
+				createdAt: teamInvitation.createdAt
+			})
+			.from(teamInvitation)
+			.where(and(eq(teamInvitation.teamId, teamId), gt(teamInvitation.expiresAt, new Date())));
+
+		pendingInvitations = invitations.map((i) => ({
+			...i,
+			createdAt: i.createdAt.toISOString()
+		}));
+	}
+
 	return {
 		team: teamData,
 		members: members.map((m) => ({
@@ -56,7 +83,8 @@ export const load: PageServerLoad = async (event) => {
 		})),
 		currentUserRole: membership.role,
 		channelCount: channelCount?.count ?? 0,
-		meetingCount: meetingCount?.count ?? 0
+		meetingCount: meetingCount?.count ?? 0,
+		pendingInvitations
 	};
 };
 
@@ -110,28 +138,78 @@ export const actions: Actions = {
 			.where(eq(user.email, email))
 			.limit(1);
 
-		if (!targetUser) {
-			return fail(404, { addMemberError: 'No user found with this email' });
+		if (targetUser) {
+			// User exists — add directly
+			const [existing] = await db
+				.select()
+				.from(teamMember)
+				.where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, targetUser.id)))
+				.limit(1);
+
+			if (existing) {
+				return fail(409, { addMemberError: 'This user is already a member' });
+			}
+
+			await db.insert(teamMember).values({
+				teamId,
+				userId: targetUser.id,
+				role: 'member'
+			});
+
+			return { success: true, invited: false };
 		}
 
-		// Check if already a member
-		const [existing] = await db
+		// User doesn't exist — send invitation
+		const [existingInvitation] = await db
 			.select()
-			.from(teamMember)
-			.where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, targetUser.id)))
+			.from(teamInvitation)
+			.where(
+				and(
+					eq(teamInvitation.teamId, teamId),
+					eq(teamInvitation.email, email),
+					gt(teamInvitation.expiresAt, new Date())
+				)
+			)
 			.limit(1);
 
-		if (existing) {
-			return fail(409, { addMemberError: 'This user is already a member' });
+		if (existingInvitation) {
+			return fail(409, { addMemberError: 'An invitation has already been sent to this email' });
 		}
 
-		await db.insert(teamMember).values({
+		// Get team name for email
+		const [teamData] = await db
+			.select({ name: team.name })
+			.from(team)
+			.where(eq(team.id, teamId))
+			.limit(1);
+
+		// Create invitation (expires in 7 days)
+		const expiresAt = new Date();
+		expiresAt.setDate(expiresAt.getDate() + 7);
+
+		await db.insert(teamInvitation).values({
 			teamId,
-			userId: targetUser.id,
-			role: 'member'
+			email,
+			role: 'member',
+			invitedBy: event.locals.user.id,
+			expiresAt
 		});
 
-		return { success: true };
+		// Send invitation email
+		const origin = env.ORIGIN || 'http://localhost:5173';
+		const signupUrl = `${origin}/login`;
+
+		void sendEmail({
+			to: email,
+			subject: `Invitation à rejoindre ${teamData?.name ?? 'une équipe'} - Equipe`,
+			htmlContent: invitationEmailHtml(
+				teamData?.name ?? 'une équipe',
+				event.locals.user.name,
+				signupUrl
+			)
+		});
+
+		return { success: true, invited: true };
 	},
 	removeMember: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
@@ -215,6 +293,32 @@ export const actions: Actions = {
 		if (target.role === 'owner') return fail(403, { message: "Cannot change the owner's role" });
 
 		await db.update(teamMember).set({ role: newRole }).where(eq(teamMember.id, memberId));
+
+		return { success: true };
+	},
+	cancelInvitation: async (event) => {
+		if (!event.locals.user) throw redirect(302, '/login');
+
+		const teamId = event.params.teamId;
+		const formData = await event.request.formData();
+		const invitationId = formData.get('invitationId')?.toString() ?? '';
+
+		if (!invitationId) return fail(400, { message: 'Invitation ID is required' });
+
+		// Only owner/admin can cancel
+		const [membership] = await db
+			.select()
+			.from(teamMember)
+			.where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, event.locals.user.id)))
+			.limit(1);
+
+		if (!membership || membership.role === 'member') {
+			return fail(403, { message: 'Only team owners and admins can cancel invitations' });
+		}
+
+		await db
+			.delete(teamInvitation)
+			.where(and(eq(teamInvitation.id, invitationId), eq(teamInvitation.teamId, teamId)));
 
 		return { success: true };
 	}

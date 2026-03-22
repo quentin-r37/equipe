@@ -85,6 +85,31 @@ export function verificationEmailHtml(url: string, userName?: string): string {
 	`);
 }
 
+export function invitationEmailHtml(
+	teamName: string,
+	inviterName: string,
+	signupUrl: string
+): string {
+	return emailLayout(`
+		<p style="margin:0 0 16px;font-size:16px;color:#161616;">
+			Bonjour,
+		</p>
+		<p style="margin:0 0 24px;font-size:14px;color:#525252;">
+			<strong>${inviterName}</strong> vous invite à rejoindre l'équipe <strong>${teamName}</strong> sur Equipe. Créez votre compte pour commencer à collaborer.
+		</p>
+		<table width="100%" cellpadding="0" cellspacing="0">
+		<tr><td align="center" style="padding:8px 0 24px;">
+			<a href="${signupUrl}" style="display:inline-block;padding:12px 24px;background:#0f62fe;color:#ffffff;text-decoration:none;border-radius:4px;font-size:14px;font-weight:500;">
+				Créer mon compte
+			</a>
+		</td></tr>
+		</table>
+		<p style="margin:0;font-size:12px;color:#8d8d8d;">
+			Si vous ne souhaitez pas rejoindre cette équipe, vous pouvez ignorer cet email.
+		</p>
+	`);
+}
+
 export function resetPasswordEmailHtml(url: string, userName?: string): string {
 	return emailLayout(`
 		<p style="margin:0 0 16px;font-size:16px;color:#161616;">

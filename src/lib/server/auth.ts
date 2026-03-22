@@ -4,6 +4,8 @@ import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
+import { teamInvitation, teamMember } from '$lib/server/db/schema';
+import { eq, and, gt } from 'drizzle-orm';
 import { sendEmail, verificationEmailHtml, resetPasswordEmailHtml } from '$lib/server/email';
 
 export const auth = betterAuth({
@@ -43,6 +45,32 @@ export const auth = betterAuth({
 				subject: 'Vérifiez votre adresse email - Equipe',
 				htmlContent: verificationEmailHtml(url, user.name)
 			});
+		}
+	},
+	databaseHooks: {
+		user: {
+			create: {
+				after: async (user) => {
+					const pending = await db
+						.select()
+						.from(teamInvitation)
+						.where(
+							and(
+								eq(teamInvitation.email, user.email.toLowerCase()),
+								gt(teamInvitation.expiresAt, new Date())
+							)
+						);
+
+					for (const invitation of pending) {
+						await db.insert(teamMember).values({
+							teamId: invitation.teamId,
+							userId: user.id,
+							role: invitation.role
+						});
+						await db.delete(teamInvitation).where(eq(teamInvitation.id, invitation.id));
+					}
+				}
+			}
 		}
 	},
 	plugins: [sveltekitCookies(getRequestEvent)] // make sure this is the last plugin in the array

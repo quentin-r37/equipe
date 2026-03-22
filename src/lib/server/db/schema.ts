@@ -91,4 +91,22 @@ export const file = pgTable('file', {
 	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
+// ── Team Invitations ──────────────────────────────────────────────
+export const teamInvitation = pgTable('team_invitation', {
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	teamId: text('team_id')
+		.notNull()
+		.references(() => team.id, { onDelete: 'cascade' }),
+	email: text('email').notNull(),
+	role: text('role').notNull().default('member'),
+	invitedBy: text('invited_by').notNull(),
+	token: text('token')
+		.notNull()
+		.$defaultFn(() => crypto.randomUUID()),
+	expiresAt: timestamp('expires_at').notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull()
+});
+
 export * from './auth.schema';

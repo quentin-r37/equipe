@@ -11,7 +11,8 @@
 		Row,
 		Column,
 		Select,
-		SelectItem
+		SelectItem,
+		InlineNotification
 	} from 'carbon-components-svelte';
 	import ArrowLeft from 'carbon-icons-svelte/lib/ArrowLeft.svelte';
 	import UserFollow from 'carbon-icons-svelte/lib/UserFollow.svelte';
@@ -22,10 +23,11 @@
 	import Group from 'carbon-icons-svelte/lib/Group.svelte';
 	import Chat from 'carbon-icons-svelte/lib/Chat.svelte';
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
-	import type { PageData } from './$types';
+	import Email from 'carbon-icons-svelte/lib/Email.svelte';
+	import type { ActionData, PageData } from './$types';
 	import type { LayoutServerData } from '../../$types';
 
-	let { data }: { data: PageData & LayoutServerData } = $props();
+	let { data, form }: { data: PageData & LayoutServerData; form: ActionData } = $props();
 
 	let showAddMemberModal = $state(false);
 	let editingDescription = $state(false);
@@ -158,6 +160,19 @@
 	</Row>
 </Grid>
 
+{#if form?.success}
+	<div class="notification">
+		<InlineNotification
+			kind="success"
+			title={form.invited ? 'Invitation sent' : 'Member added'}
+			subtitle={form.invited
+				? 'An invitation email has been sent.'
+				: 'The member has been added to the team.'}
+			hideCloseButton
+		/>
+	</div>
+{/if}
+
 <!-- Members -->
 <Grid fullWidth>
 	<Row>
@@ -232,6 +247,49 @@
 	</Row>
 </Grid>
 
+<!-- Pending Invitations -->
+{#if isOwnerOrAdmin && data.pendingInvitations.length > 0}
+	<Grid fullWidth>
+		<Row>
+			<Column sm={4} md={8} lg={10} padding>
+				<div class="section-header">
+					<h3>Pending Invitations</h3>
+				</div>
+				<div class="member-list">
+					{#each data.pendingInvitations as invitation (invitation.id)}
+						<Tile>
+							<div class="member-row">
+								<div class="member-info">
+									<p class="member-name">
+										<Email size={16} />
+										{invitation.email}
+									</p>
+									<p class="member-meta">
+										Invited {new Date(invitation.createdAt).toLocaleDateString()}
+									</p>
+								</div>
+								<div class="member-actions">
+									<Tag size="sm" type="cyan">Pending</Tag>
+									<form method="post" action="?/cancelInvitation" use:enhance>
+										<input type="hidden" name="invitationId" value={invitation.id} />
+										<Button
+											size="small"
+											kind="danger-ghost"
+											icon={TrashCan}
+											iconDescription="Cancel invitation"
+											type="submit"
+										/>
+									</form>
+								</div>
+							</div>
+						</Tile>
+					{/each}
+				</div>
+			</Column>
+		</Row>
+	</Grid>
+{/if}
+
 <!-- Remove member confirmation -->
 <Modal
 	bind:open={showRemoveConfirm}
@@ -300,6 +358,10 @@
 
 	.page-header h1 {
 		margin: 0;
+	}
+
+	.notification {
+		margin-bottom: var(--cds-spacing-05);
 	}
 
 	/* Stats */
