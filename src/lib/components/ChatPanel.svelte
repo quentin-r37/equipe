@@ -74,45 +74,96 @@
 				});
 		}
 
-		const es = new EventSource(`/api/messages/stream?channelId=${id}`);
+		let es: EventSource;
+		let reconnectTimeout: ReturnType<typeof setTimeout>;
+		let closed = false;
 
-		es.addEventListener('message', (event) => {
-			const msg: ChatMessage = JSON.parse(event.data);
-			const isDuplicate =
-				sseMessages.some((m) => m.id === msg.id) || loadedMessages.some((m) => m.id === msg.id);
-			if (!isDuplicate) {
-				sseMessages = [...sseMessages, msg];
-				requestAnimationFrame(scrollToBottom);
-			}
-		});
+		function getLatestTimestamp(): string | undefined {
+			const all = [...loadedMessages, ...sseMessages];
+			if (all.length === 0) return undefined;
+			return all.reduce((latest, m) => (m.createdAt > latest ? m.createdAt : latest), all[0].createdAt);
+		}
 
-		es.addEventListener('update', (event) => {
-			const updated: ChatMessage = JSON.parse(event.data);
-			sseMessages = sseMessages.map((m) => (m.id === updated.id ? updated : m));
-			loadedMessages = loadedMessages.map((m) => (m.id === updated.id ? updated : m));
-		});
-
-		es.addEventListener('delete', (event) => {
-			const { id: deletedId } = JSON.parse(event.data);
-			sseMessages = sseMessages.filter((m) => m.id !== deletedId);
-			loadedMessages = loadedMessages.filter((m) => m.id !== deletedId);
-		});
-
-		es.addEventListener('file_delete', (event) => {
-			const { id: fileId, messageId } = JSON.parse(event.data);
-			function removeFile(msg: ChatMessage) {
-				if (msg.id === messageId && msg.files) {
-					return { ...msg, files: msg.files.filter((f) => f.id !== fileId) };
+		async function fetchMissedMessages() {
+			const after = getLatestTimestamp();
+			if (!after) return;
+			try {
+				const res = await fetch(`/api/messages?channelId=${id}&after=${encodeURIComponent(after)}`);
+				if (!res.ok) return;
+				const msgs: ChatMessage[] = await res.json();
+				for (const msg of msgs) {
+					const isDuplicate =
+						sseMessages.some((m) => m.id === msg.id) ||
+						loadedMessages.some((m) => m.id === msg.id);
+					if (!isDuplicate) {
+						sseMessages = [...sseMessages, msg];
+					}
 				}
-				return msg;
+				if (msgs.length > 0) requestAnimationFrame(scrollToBottom);
+			} catch {
+				// Network error — will retry on next reconnect
 			}
-			sseMessages = sseMessages.map(removeFile);
-			loadedMessages = loadedMessages.map(removeFile);
-		});
+		}
 
+		function connect() {
+			if (closed) return;
+			es = new EventSource(`/api/messages/stream?channelId=${id}`);
+
+			es.addEventListener('message', (event) => {
+				const msg: ChatMessage = JSON.parse(event.data);
+				const isDuplicate =
+					sseMessages.some((m) => m.id === msg.id) ||
+					loadedMessages.some((m) => m.id === msg.id);
+				if (!isDuplicate) {
+					sseMessages = [...sseMessages, msg];
+					requestAnimationFrame(scrollToBottom);
+				}
+			});
+
+			es.addEventListener('update', (event) => {
+				const updated: ChatMessage = JSON.parse(event.data);
+				sseMessages = sseMessages.map((m) => (m.id === updated.id ? updated : m));
+				loadedMessages = loadedMessages.map((m) => (m.id === updated.id ? updated : m));
+			});
+
+			es.addEventListener('delete', (event) => {
+				const { id: deletedId } = JSON.parse(event.data);
+				sseMessages = sseMessages.filter((m) => m.id !== deletedId);
+				loadedMessages = loadedMessages.filter((m) => m.id !== deletedId);
+			});
+
+			es.addEventListener('file_delete', (event) => {
+				const { id: fileId, messageId } = JSON.parse(event.data);
+				function removeFile(msg: ChatMessage) {
+					if (msg.id === messageId && msg.files) {
+						return { ...msg, files: msg.files.filter((f) => f.id !== fileId) };
+					}
+					return msg;
+				}
+				sseMessages = sseMessages.map(removeFile);
+				loadedMessages = loadedMessages.map(removeFile);
+			});
+
+			es.onerror = () => {
+				es.close();
+				if (closed) return;
+				// Fetch messages that may have been sent while disconnected, then reconnect
+				fetchMissedMessages().finally(() => {
+					if (!closed) {
+						reconnectTimeout = setTimeout(connect, 3000);
+					}
+				});
+			};
+		}
+
+		connect();
 		requestAnimationFrame(scrollToBottom);
 
-		return () => es.close();
+		return () => {
+			closed = true;
+			clearTimeout(reconnectTimeout);
+			es?.close();
+		};
 	});
 
 	async function sendMessage() {

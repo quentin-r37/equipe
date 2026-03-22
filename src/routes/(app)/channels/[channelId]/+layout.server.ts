@@ -22,6 +22,7 @@ export const load: LayoutServerLoad = async (event) => {
 	if (!membership) throw error(403, 'Not a member of this team');
 
 	return {
-		channel: ch
+		channel: ch,
+		membership
 	};
 };

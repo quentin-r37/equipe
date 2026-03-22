@@ -6,7 +6,7 @@ import { messageBus } from '$lib/server/messages';
 import type { ChatFile } from '$lib/server/messages';
 import { notificationBus } from '$lib/server/notifications';
 import { uploadFile, deleteFile as deleteStorageFile } from '$lib/server/seaweedfs';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, gt } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
 	if (!locals.user) throw error(401, 'Not authenticated');
@@ -28,10 +28,15 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		.limit(1);
 	if (!membership) throw error(403, 'Not a member of this team');
 
+	const after = url.searchParams.get('after');
 	const messages = await db
 		.select()
 		.from(message)
-		.where(eq(message.channelId, channelId))
+		.where(
+			after
+				? and(eq(message.channelId, channelId), gt(message.createdAt, new Date(after)))
+				: eq(message.channelId, channelId)
+		)
 		.orderBy(desc(message.createdAt))
 		.limit(50);
 
