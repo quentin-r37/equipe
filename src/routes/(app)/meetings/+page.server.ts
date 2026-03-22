@@ -3,12 +3,27 @@ import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { meeting, team, teamMember } from '$lib/server/db/schema';
 import { notificationBus } from '$lib/server/notifications';
-import { eq, desc } from 'drizzle-orm';
+import { and, eq, desc } from 'drizzle-orm';
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) throw redirect(302, '/login');
 
-	const meetings = await db.select().from(meeting).orderBy(desc(meeting.createdAt)).limit(50);
+	const meetings = await db
+		.select({
+			id: meeting.id,
+			teamId: meeting.teamId,
+			title: meeting.title,
+			status: meeting.status,
+			createdAt: meeting.createdAt,
+			createdBy: meeting.createdBy
+		})
+		.from(meeting)
+		.innerJoin(
+			teamMember,
+			and(eq(teamMember.teamId, meeting.teamId), eq(teamMember.userId, event.locals.user.id))
+		)
+		.orderBy(desc(meeting.createdAt))
+		.limit(50);
 
 	return {
 		meetings: meetings.map((m) => ({
@@ -28,6 +43,14 @@ export const actions: Actions = {
 
 		if (!title) return fail(400, { message: 'Meeting title is required' });
 		if (!teamId) return fail(400, { message: 'Team is required' });
+
+		const [membership] = await db
+			.select()
+			.from(teamMember)
+			.where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, event.locals.user.id)))
+			.limit(1);
+
+		if (!membership) return fail(403, { message: 'Not a member of this team' });
 
 		const [newMeeting] = await db
 			.insert(meeting)
@@ -65,6 +88,17 @@ export const actions: Actions = {
 
 		const formData = await event.request.formData();
 		const meetingId = formData.get('meetingId')?.toString() ?? '';
+
+		const [m] = await db.select().from(meeting).where(eq(meeting.id, meetingId)).limit(1);
+		if (!m) return fail(404, { message: 'Meeting not found' });
+
+		const [membership] = await db
+			.select()
+			.from(teamMember)
+			.where(and(eq(teamMember.teamId, m.teamId), eq(teamMember.userId, event.locals.user.id)))
+			.limit(1);
+
+		if (!membership) return fail(403, { message: 'Not a member of this team' });
 
 		await db.update(meeting).set({ status: 'ended' }).where(eq(meeting.id, meetingId));
 
