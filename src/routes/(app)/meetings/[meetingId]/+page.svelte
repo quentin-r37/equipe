@@ -107,7 +107,7 @@
 	});
 </script>
 
-<div class="meeting-wrapper">
+<div class="meeting-wrapper" class:mobile-chat={chatOpen}>
 	<div class="meeting-container">
 		<div class="meeting-header">
 			<div>
@@ -178,11 +178,13 @@
 	</div>
 
 	{#if chatOpen && data.teamChannels.length > 0}
-		<MeetingChat
-			channels={data.teamChannels}
-			userId={data.userId}
-			onclose={() => (chatOpen = false)}
-		/>
+		<div class="chat-panel">
+			<MeetingChat
+				channels={data.teamChannels}
+				userId={data.userId}
+				onclose={() => (chatOpen = false)}
+			/>
+		</div>
 	{/if}
 </div>
 
@@ -190,6 +192,7 @@
 	.meeting-wrapper {
 		display: flex;
 		height: calc(100vh - 7rem);
+		position: relative;
 	}
 
 	.meeting-container {
@@ -267,5 +270,57 @@
 		gap: var(--cds-spacing-05);
 		padding: var(--cds-spacing-05) 0;
 		border-top: 1px solid var(--cds-border-subtle);
+	}
+
+	/* ── Chat panel (desktop: sidebar) ── */
+	.chat-panel {
+		display: flex;
+		height: 100%;
+	}
+
+	/* ── Mobile responsive ── */
+	@media (max-width: 672px) {
+		.meeting-wrapper {
+			height: calc(100vh - 3rem);
+			margin: calc(-1 * var(--cds-spacing-04));
+			flex-direction: column;
+		}
+
+		.meeting-header {
+			padding: var(--cds-spacing-03) var(--cds-spacing-04);
+		}
+
+		.meeting-header h2 {
+			font-size: 1rem;
+		}
+
+		.video-area {
+			padding: var(--cds-spacing-03);
+		}
+
+		.video-grid {
+			grid-template-columns: 1fr;
+			gap: var(--cds-spacing-03);
+		}
+
+		.controls {
+			gap: var(--cds-spacing-03);
+			padding: var(--cds-spacing-03) 0;
+		}
+
+		/* When chat is open on mobile: hide video, show chat full-width */
+		.mobile-chat .meeting-container {
+			flex: none;
+		}
+
+		.mobile-chat .meeting-container .video-area,
+		.mobile-chat .meeting-container .meeting-header {
+			display: none;
+		}
+
+		.mobile-chat .chat-panel {
+			flex: 1;
+			min-height: 0;
+		}
 	}
 </style>

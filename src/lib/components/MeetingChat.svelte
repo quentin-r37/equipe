@@ -68,4 +68,11 @@
 	.chat-header :global(.bx--select) {
 		flex: 1;
 	}
+
+	@media (max-width: 672px) {
+		.meeting-chat {
+			width: 100%;
+			border-left: none;
+		}
+	}
 </style>
