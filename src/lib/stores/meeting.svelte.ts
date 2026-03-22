@@ -19,6 +19,7 @@ class MeetingState {
 	participants: string[] = $state([]);
 	errorMsg = $state('');
 	remoteTracks: RemoteTrackInfo[] = $state([]);
+	localVideoTrack: any = $state(null);
 
 	isActive = $derived(this.connected && this.room !== null);
 
@@ -59,6 +60,8 @@ class MeetingState {
 			await room.localParticipant.enableCameraAndMicrophone();
 			this.micEnabled = true;
 			this.camEnabled = true;
+			this.localVideoTrack =
+				room.localParticipant.getTrackPublication(this.Track.Source.Camera)?.track ?? null;
 
 			this.updateParticipants();
 			this.detectExistingScreenShare();
@@ -93,6 +96,7 @@ class MeetingState {
 		this.participants = [];
 		this.errorMsg = '';
 		this.remoteTracks = [];
+		this.localVideoTrack = null;
 	}
 
 	async toggleMic() {
@@ -103,8 +107,12 @@ class MeetingState {
 
 	async toggleCam() {
 		if (!this.room) return;
-		await this.room.localParticipant.setCameraEnabled(!this.camEnabled);
-		this.camEnabled = !this.camEnabled;
+		const newEnabled = !this.camEnabled;
+		await this.room.localParticipant.setCameraEnabled(newEnabled);
+		this.camEnabled = newEnabled;
+		this.localVideoTrack = newEnabled
+			? (this.room.localParticipant.getTrackPublication(this.Track.Source.Camera)?.track ?? null)
+			: null;
 	}
 
 	async toggleScreenShare() {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Button, Tag, InlineNotification } from 'carbon-components-svelte';
 	import Microphone from 'carbon-icons-svelte/lib/Microphone.svelte';
@@ -19,8 +20,8 @@
 	let chatOpen = $state(false);
 	let screenShareVideoEl: HTMLDivElement | undefined = $state();
 
-	// Connect to the meeting (or re-use existing connection)
-	$effect(() => {
+	// Connect on mount (same timing as onMount — runs once after DOM is ready)
+	onMount(() => {
 		if (meetingState.meetingId !== data.meeting.id) {
 			meetingState.connect(data.meeting.id, data.meeting.title, data.livekitUrl, data.token);
 		}
@@ -45,7 +46,6 @@
 	});
 
 	// Derived state from the store
-	const localVideoTrack = $derived(meetingState.getLocalVideoTrack());
 	const screenShareTracks = $derived(
 		meetingState.remoteTracks.filter((rt) => rt.source === 'screen_share')
 	);
@@ -99,8 +99,8 @@
 
 			<div class="video-grid">
 				<div class="video-tile">
-					{#if localVideoTrack && meetingState.camEnabled}
-						<VideoTrack track={localVideoTrack} mirror={true} />
+					{#if meetingState.localVideoTrack && meetingState.camEnabled}
+						<VideoTrack track={meetingState.localVideoTrack} mirror={true} />
 					{:else}
 						<div class="cam-off"></div>
 					{/if}

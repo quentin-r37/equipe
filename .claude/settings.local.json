@@ -33,7 +33,8 @@
       "mcp__svelte__get-documentation",
       "Bash(ls -la /c/repo/perso/equipe/src/routes/\\\\\\(auth\\\\\\)/)",
       "Bash(2)",
-      "Bash(xargs -I {} basename {} .svelte)"
+      "Bash(xargs -I {} basename {} .svelte)",
+      "Bash(find /c/repo/perso/equipe/src/routes -path \"*\\(app\\)*\" -name \"+page.*\")"
     ]
   }
 }

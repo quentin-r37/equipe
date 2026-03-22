@@ -11,7 +11,7 @@
 	import { meetingState } from '$lib/stores/meeting.svelte';
 	import VideoTrack from './VideoTrack.svelte';
 
-	const localTrack = $derived(meetingState.getLocalVideoTrack());
+	const localTrack = $derived(meetingState.localVideoTrack);
 
 	async function leave() {
 		await meetingState.disconnect();
