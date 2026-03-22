@@ -61,15 +61,17 @@
 	<HeaderUtilities>
 		<HeaderGlobalAction
 			aria-label="Notifications"
+			iconDescription="Notifications"
 			icon={hasUnread ? NotificationNew : NotificationIcon}
 			onclick={handleNotificationBell}
 		/>
 		<HeaderAction icon={ColorPalette} iconDescription="Theme">
 			<ThemeSelector />
 		</HeaderAction>
-		<HeaderGlobalAction aria-label={data.user.name || data.user.email} icon={UserAvatar} />
+		<HeaderGlobalAction aria-label={data.user.name || data.user.email} iconDescription={data.user.name || data.user.email} icon={UserAvatar} />
 		<HeaderGlobalAction
 			aria-label="Sign out"
+			iconDescription="Sign out"
 			icon={Logout}
 			onclick={() => {
 				const form = document.getElementById('signout-form') as HTMLFormElement;

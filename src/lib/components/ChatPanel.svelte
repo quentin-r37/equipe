@@ -518,6 +518,7 @@
 	.messages-area {
 		flex: 1;
 		overflow-y: auto;
+		overflow-x: hidden;
 		padding: var(--cds-spacing-05) var(--cds-spacing-06);
 	}
 
@@ -675,6 +676,7 @@
 	.file-wrapper {
 		position: relative;
 		width: fit-content;
+		max-width: 100%;
 	}
 
 	.file-remove-btn {
@@ -719,7 +721,7 @@
 	}
 
 	.image-preview img {
-		max-width: 400px;
+		max-width: 100%;
 		max-height: 300px;
 		border-radius: 4px;
 		object-fit: contain;
@@ -727,19 +729,17 @@
 	}
 
 	.compact .image-preview img {
-		max-width: 200px;
 		max-height: 150px;
 	}
 
 	.video-preview {
-		max-width: 480px;
+		max-width: 100%;
 		max-height: 360px;
 		border-radius: 4px;
 		background: #000;
 	}
 
 	.compact .video-preview {
-		max-width: 260px;
 		max-height: 180px;
 	}
 
@@ -765,7 +765,7 @@
 		text-decoration: none;
 		color: var(--cds-text-primary);
 		width: fit-content;
-		max-width: 400px;
+		max-width: 100%;
 	}
 
 	.file-attachment:hover {
@@ -795,6 +795,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		min-width: 0;
 	}
 
 	.file-size {
