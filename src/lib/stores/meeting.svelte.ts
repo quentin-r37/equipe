@@ -13,10 +13,12 @@ class MeetingState {
 	meetingId: string | null = $state(null);
 	meetingTitle: string | null = $state(null);
 	micEnabled = $state(true);
-	camEnabled = $state(true);
+	camEnabled = $state(false);
 	screenShareEnabled = $state(false);
 	screenShareParticipant: string | null = $state(null);
+	localParticipantName: string = $state('');
 	participants: string[] = $state([]);
+	remoteParticipantList: { identity: string; name: string }[] = $state([]);
 	errorMsg = $state('');
 	remoteTracks: RemoteTrackInfo[] = $state([]);
 	localVideoTrack: any = $state(null);
@@ -56,12 +58,12 @@ class MeetingState {
 
 			await room.connect(livekitUrl, token);
 			this.connected = true;
+			this.localParticipantName = room.localParticipant.name || '';
 
-			await room.localParticipant.enableCameraAndMicrophone();
+			await room.localParticipant.setMicrophoneEnabled(true);
 			this.micEnabled = true;
-			this.camEnabled = true;
-			this.localVideoTrack =
-				room.localParticipant.getTrackPublication(this.Track.Source.Camera)?.track ?? null;
+			this.camEnabled = false;
+			this.localVideoTrack = null;
 
 			this.updateParticipants();
 			this.detectExistingScreenShare();
@@ -89,11 +91,13 @@ class MeetingState {
 		this.connected = false;
 		this.meetingId = null;
 		this.meetingTitle = null;
+		this.localParticipantName = '';
 		this.micEnabled = true;
-		this.camEnabled = true;
+		this.camEnabled = false;
 		this.screenShareEnabled = false;
 		this.screenShareParticipant = null;
 		this.participants = [];
+		this.remoteParticipantList = [];
 		this.errorMsg = '';
 		this.remoteTracks = [];
 		this.localVideoTrack = null;
@@ -247,10 +251,13 @@ class MeetingState {
 	private updateParticipants() {
 		if (!this.room) return;
 		const names = [this.room.localParticipant.name || 'You'];
+		const remotes: { identity: string; name: string }[] = [];
 		for (const p of this.room.remoteParticipants.values()) {
 			names.push(p.name || p.identity);
+			remotes.push({ identity: p.identity, name: p.name || p.identity });
 		}
 		this.participants = names;
+		this.remoteParticipantList = remotes;
 	}
 
 	private detectExistingScreenShare() {

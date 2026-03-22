@@ -20,6 +20,12 @@
 	let chatOpen = $state(false);
 	let screenShareVideoEl: HTMLDivElement | undefined = $state();
 
+	function getInitials(name: string): string {
+		const parts = name.trim().split(/\s+/);
+		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+		return name.slice(0, 2).toUpperCase();
+	}
+
 	// Connect on mount (same timing as onMount — runs once after DOM is ready)
 	onMount(() => {
 		if (meetingState.meetingId !== data.meeting.id) {
@@ -50,6 +56,12 @@
 		meetingState.remoteTracks.filter((rt) => rt.source === 'screen_share')
 	);
 	const cameraTracks = $derived(meetingState.remoteTracks.filter((rt) => rt.source === 'camera'));
+	const remoteParticipantsWithTracks = $derived(
+		meetingState.remoteParticipantList.map((p) => ({
+			...p,
+			cameraTrack: cameraTracks.find((rt) => rt.participantIdentity === p.identity)?.track ?? null
+		}))
+	);
 
 	async function leaveMeeting() {
 		await meetingState.disconnect();
@@ -102,15 +114,23 @@
 					{#if meetingState.localVideoTrack && meetingState.camEnabled}
 						<VideoTrack track={meetingState.localVideoTrack} mirror={true} />
 					{:else}
-						<div class="cam-off"></div>
+						<div class="cam-off">
+							<span class="avatar">{getInitials(data.userName)}</span>
+						</div>
 					{/if}
 					<span class="video-label">You</span>
 				</div>
 
-				{#each cameraTracks as rt (rt.participantIdentity)}
+				{#each remoteParticipantsWithTracks as rp (rp.identity)}
 					<div class="video-tile">
-						<VideoTrack track={rt.track} />
-						<span class="video-label">{rt.participantName}</span>
+						{#if rp.cameraTrack}
+							<VideoTrack track={rp.cameraTrack} />
+						{:else}
+							<div class="cam-off">
+								<span class="avatar">{getInitials(rp.name)}</span>
+							</div>
+						{/if}
+						<span class="video-label">{rp.name}</span>
 					</div>
 				{/each}
 			</div>
@@ -227,6 +247,23 @@
 	.cam-off {
 		width: 100%;
 		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.avatar {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 80px;
+		height: 80px;
+		border-radius: 50%;
+		background: var(--cds-interactive);
+		color: var(--cds-text-on-color);
+		font-size: 1.75rem;
+		font-weight: 600;
+		user-select: none;
 	}
 
 	.video-label {

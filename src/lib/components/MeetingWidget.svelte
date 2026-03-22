@@ -13,6 +13,12 @@
 
 	const localTrack = $derived(meetingState.localVideoTrack);
 
+	function getInitials(name: string): string {
+		const parts = name.trim().split(/\s+/);
+		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+		return name.slice(0, 2).toUpperCase();
+	}
+
 	async function leave() {
 		await meetingState.disconnect();
 		goto('/meetings');
@@ -41,7 +47,11 @@
 			<VideoTrack track={localTrack} mirror={true} />
 		{:else}
 			<div class="cam-off-placeholder">
-				<VideoOff size={24} />
+				{#if meetingState.localParticipantName}
+					<span class="avatar">{getInitials(meetingState.localParticipantName)}</span>
+				{:else}
+					<VideoOff size={24} />
+				{/if}
 			</div>
 		{/if}
 	</button>
@@ -138,6 +148,20 @@
 		align-items: center;
 		justify-content: center;
 		color: var(--cds-text-on-color);
+	}
+
+	.avatar {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 48px;
+		height: 48px;
+		border-radius: 50%;
+		background: var(--cds-interactive);
+		color: var(--cds-text-on-color);
+		font-size: 1.125rem;
+		font-weight: 600;
+		user-select: none;
 	}
 
 	.widget-controls {

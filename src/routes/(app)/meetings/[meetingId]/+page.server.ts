@@ -38,6 +38,7 @@ export const load: PageServerLoad = async (event) => {
 		livekitUrl: env.LIVEKIT_URL || 'ws://localhost:7880',
 		token,
 		teamChannels,
-		userId: event.locals.user.id
+		userId: event.locals.user.id,
+		userName: event.locals.user.name
 	};
 };
