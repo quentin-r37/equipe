@@ -32,7 +32,8 @@
       "Bash(python3:*)",
       "mcp__svelte__get-documentation",
       "Bash(ls -la /c/repo/perso/equipe/src/routes/\\\\\\(auth\\\\\\)/)",
-      "Bash(2)"
+      "Bash(2)",
+      "Bash(xargs -I {} basename {} .svelte)"
     ]
   }
 }
