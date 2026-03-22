@@ -117,3 +117,43 @@ a.bx--side-nav__link--current .bx--side-nav__link-text {
 .bx--side-nav__header-divider::after {
 	background: var(--cds-ui-03, #e0e0e0) !important;
 }
+
+/*
+ * Carbon-compliant scrollbar styles
+ * Thin, subtle scrollbars using Carbon Design System tokens.
+ *
+ * Firefox: uses standard scrollbar-width/scrollbar-color.
+ * Chrome/Edge/Safari: uses ::-webkit-scrollbar pseudo-elements
+ * (scrollbar-color is omitted for Webkit so pseudo-elements take effect).
+ */
+
+/* Firefox */
+@-moz-document url-prefix() {
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: var(--cds-border-subtle, #c6c6c6) transparent;
+	}
+}
+
+/* Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+	width: 4px;
+	height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+	background-color: var(--cds-border-subtle, #c6c6c6);
+	border-radius: 0;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+	background-color: var(--cds-border-strong, #8d8d8d);
+}
+
+*::-webkit-scrollbar-corner {
+	background: transparent;
+}

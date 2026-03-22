@@ -31,7 +31,8 @@
       "Bash(node:*)",
       "Bash(python3:*)",
       "mcp__svelte__get-documentation",
-      "Bash(ls -la /c/repo/perso/equipe/src/routes/\\\\\\(auth\\\\\\)/)"
+      "Bash(ls -la /c/repo/perso/equipe/src/routes/\\\\\\(auth\\\\\\)/)",
+      "Bash(2)"
     ]
   }
 }
