@@ -8,10 +8,12 @@
 	let videoEl: HTMLVideoElement | undefined = $state();
 
 	$effect(() => {
-		if (track && videoEl) {
-			track.attach(videoEl);
+		const currentTrack = track;
+		const el = videoEl;
+		if (currentTrack && el) {
+			currentTrack.attach(el);
 			return () => {
-				track.detach(videoEl);
+				currentTrack.detach(el);
 			};
 		}
 	});
