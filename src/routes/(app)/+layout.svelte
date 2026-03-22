@@ -27,7 +27,9 @@
 	import Logo from '$lib/components/Logo.svelte';
 	import ThemeSelector from '$lib/components/ThemeSelector.svelte';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
+	import MeetingWidget from '$lib/components/MeetingWidget.svelte';
 	import { notificationState } from '$lib/stores/notifications.svelte';
+	import { meetingState } from '$lib/stores/meeting.svelte';
 	import type { LayoutServerData } from './$types';
 
 	let { data, children }: { data: LayoutServerData; children: any } = $props();
@@ -36,6 +38,9 @@
 
 	const pathname = $derived(page.url.pathname);
 	const hasUnread = $derived(notificationState.notifications.length > 0);
+	const isOnMeetingPage = $derived(
+		meetingState.meetingId !== null && pathname === `/meetings/${meetingState.meetingId}`
+	);
 
 	$effect(() => {
 		if (browser) {
@@ -68,7 +73,11 @@
 		<HeaderAction icon={ColorPalette} iconDescription="Theme">
 			<ThemeSelector />
 		</HeaderAction>
-		<HeaderGlobalAction aria-label={data.user.name || data.user.email} iconDescription={data.user.name || data.user.email} icon={UserAvatar} />
+		<HeaderGlobalAction
+			aria-label={data.user.name || data.user.email}
+			iconDescription={data.user.name || data.user.email}
+			icon={UserAvatar}
+		/>
 		<HeaderGlobalAction
 			aria-label="Sign out"
 			iconDescription="Sign out"
@@ -135,6 +144,10 @@
 </Content>
 
 <NotificationToast />
+
+{#if meetingState.isActive && !isOnMeetingPage}
+	<MeetingWidget />
+{/if}
 
 <style>
 	.header-logo {

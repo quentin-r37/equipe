@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Button, Tile, Tag, InlineNotification } from 'carbon-components-svelte';
+	import { Button, Tag, InlineNotification } from 'carbon-components-svelte';
 	import Microphone from 'carbon-icons-svelte/lib/Microphone.svelte';
 	import MicrophoneOff from 'carbon-icons-svelte/lib/MicrophoneOff.svelte';
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
@@ -11,215 +10,51 @@
 	import Screen from 'carbon-icons-svelte/lib/Screen.svelte';
 	import ScreenOff from 'carbon-icons-svelte/lib/ScreenOff.svelte';
 	import MeetingChat from '$lib/components/MeetingChat.svelte';
+	import VideoTrack from '$lib/components/VideoTrack.svelte';
+	import { meetingState } from '$lib/stores/meeting.svelte';
 	import type { PageServerData } from './$types';
 
 	let { data }: { data: PageServerData } = $props();
 
 	let chatOpen = $state(false);
-
-	let videoGrid: HTMLDivElement | undefined = $state();
-	let localVideoEl: HTMLVideoElement | undefined = $state();
-	let room: any = $state(null);
-	let connected = $state(false);
-	let micEnabled = $state(true);
-	let camEnabled = $state(true);
-	let participants = $state<string[]>([]);
-	let errorMsg = $state('');
-	let screenShareEnabled = $state(false);
-	let screenShareParticipant = $state<string | null>(null);
 	let screenShareVideoEl: HTMLDivElement | undefined = $state();
-	let TrackRef: any;
 
-	onMount(async () => {
-		try {
-			const { Room, RoomEvent, Track } = await import('livekit-client');
-			TrackRef = Track;
-
-			room = new Room();
-
-			room.on(RoomEvent.TrackSubscribed, (track: any, publication: any, participant: any) => {
-				if (track.kind === Track.Kind.Video) {
-					const el = track.attach();
-					el.style.width = '100%';
-					el.style.borderRadius = '8px';
-					el.dataset.participantId = participant.identity;
-
-					if (publication.source === Track.Source.ScreenShare) {
-						el.style.objectFit = 'contain';
-						screenShareParticipant = participant.identity;
-						screenShareVideoEl
-							?.querySelectorAll('video')
-							.forEach((v: Element) => v.remove());
-						screenShareVideoEl?.appendChild(el);
-					} else {
-						videoGrid?.appendChild(el);
-					}
-				} else if (track.kind === Track.Kind.Audio) {
-					const el = track.attach();
-					el.style.display = 'none';
-					document.body.appendChild(el);
-				}
-			});
-
-			room.on(RoomEvent.TrackUnsubscribed, (track: any, publication: any, participant: any) => {
-				track.detach().forEach((el: HTMLElement) => el.remove());
-				if (
-					publication.source === Track.Source.ScreenShare &&
-					screenShareParticipant === participant.identity
-				) {
-					screenShareParticipant = null;
-				}
-			});
-
-			room.on(RoomEvent.ParticipantConnected, () => {
-				updateParticipants();
-			});
-
-			room.on(RoomEvent.ParticipantDisconnected, () => {
-				updateParticipants();
-			});
-
-			room.on(RoomEvent.Disconnected, () => {
-				connected = false;
-				screenShareEnabled = false;
-				screenShareParticipant = null;
-			});
-
-			room.on(RoomEvent.LocalTrackUnpublished, (publication: any) => {
-				if (publication.source === Track.Source.ScreenShare) {
-					screenShareEnabled = false;
-					screenShareParticipant = null;
-					screenShareVideoEl
-						?.querySelectorAll('video')
-						.forEach((el: Element) => el.remove());
-				}
-			});
-
-			room.on(RoomEvent.TrackPublished, (publication: any, participant: any) => {
-				if (publication.source === Track.Source.ScreenShare) {
-					screenShareParticipant = participant.identity;
-				}
-			});
-
-			room.on(RoomEvent.TrackUnpublished, (publication: any, participant: any) => {
-				if (
-					publication.source === Track.Source.ScreenShare &&
-					screenShareParticipant === participant.identity
-				) {
-					screenShareParticipant = null;
-				}
-			});
-
-			await room.connect(data.livekitUrl, data.token);
-			connected = true;
-
-			await room.localParticipant.enableCameraAndMicrophone();
-
-			const localVideoTrack = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
-			if (localVideoTrack && localVideoEl) {
-				localVideoTrack.attach(localVideoEl);
-			}
-
-			updateParticipants();
-
-			// Check for existing screen shares from remote participants
-			for (const p of room.remoteParticipants.values()) {
-				const screenPub = p.getTrackPublication(Track.Source.ScreenShare);
-				if (screenPub && screenPub.isSubscribed && screenPub.track) {
-					screenShareParticipant = p.identity;
-					break;
-				}
-			}
-		} catch (err: any) {
-			errorMsg = err.message || 'Failed to connect to meeting';
-		}
-	});
-
-	function updateParticipants() {
-		if (!room) return;
-		const names = [room.localParticipant.name || 'You'];
-		for (const p of room.remoteParticipants.values()) {
-			names.push(p.name || p.identity);
-		}
-		participants = names;
-	}
-
-	async function toggleMic() {
-		if (!room) return;
-		await room.localParticipant.setMicrophoneEnabled(!micEnabled);
-		micEnabled = !micEnabled;
-	}
-
-	async function toggleCam() {
-		if (!room) return;
-		await room.localParticipant.setCameraEnabled(!camEnabled);
-		camEnabled = !camEnabled;
-	}
-
-	async function toggleScreenShare() {
-		if (!room) return;
-
-		if (
-			!screenShareEnabled &&
-			screenShareParticipant &&
-			screenShareParticipant !== room.localParticipant.identity
-		) {
-			errorMsg = `${getParticipantName(screenShareParticipant)} is already sharing their screen`;
-			setTimeout(() => {
-				if (errorMsg.includes('already sharing')) errorMsg = '';
-			}, 4000);
-			return;
-		}
-
-		try {
-			if (!screenShareEnabled) {
-				await room.localParticipant.setScreenShareEnabled(true, { audio: true });
-				screenShareEnabled = true;
-				screenShareParticipant = room.localParticipant.identity;
-			} else {
-				await room.localParticipant.setScreenShareEnabled(false);
-				screenShareEnabled = false;
-				screenShareParticipant = null;
-				screenShareVideoEl
-					?.querySelectorAll('video')
-					.forEach((el: Element) => el.remove());
-			}
-		} catch (err: any) {
-			if (err.name === 'NotAllowedError') return;
-			errorMsg = err.message || 'Failed to share screen';
-		}
-	}
-
-	function getParticipantName(identity: string): string {
-		if (identity === room?.localParticipant?.identity) return 'You';
-		const remote = room?.remoteParticipants?.get(identity);
-		return remote?.name || remote?.identity || 'Someone';
-	}
-
+	// Connect to the meeting (or re-use existing connection)
 	$effect(() => {
-		if (screenShareParticipant && screenShareVideoEl && room && TrackRef) {
-			if (screenShareParticipant === room.localParticipant.identity) {
-				const screenTrack =
-					room.localParticipant.getTrackPublication(TrackRef.Source.ScreenShare)?.track;
-				if (screenTrack && !screenShareVideoEl.querySelector('video')) {
-					const el = screenTrack.attach();
-					el.style.width = '100%';
-					el.style.objectFit = 'contain';
-					el.style.borderRadius = '8px';
-					screenShareVideoEl.appendChild(el);
-				}
+		if (meetingState.meetingId !== data.meeting.id) {
+			meetingState.connect(data.meeting.id, data.meeting.title, data.livekitUrl, data.token);
+		}
+	});
+
+	// Attach local screen share track to the dedicated container
+	$effect(() => {
+		if (
+			screenShareVideoEl &&
+			meetingState.screenShareParticipant &&
+			meetingState.screenShareParticipant === meetingState.room?.localParticipant?.identity
+		) {
+			const screenTrack = meetingState.getLocalScreenShareTrack();
+			if (screenTrack && !screenShareVideoEl.querySelector('video')) {
+				const el = screenTrack.attach();
+				el.style.width = '100%';
+				el.style.objectFit = 'contain';
+				el.style.borderRadius = '8px';
+				screenShareVideoEl.appendChild(el);
 			}
 		}
 	});
+
+	// Derived state from the store
+	const localVideoTrack = $derived(meetingState.getLocalVideoTrack());
+	const screenShareTracks = $derived(
+		meetingState.remoteTracks.filter((rt) => rt.source === 'screen_share')
+	);
+	const cameraTracks = $derived(meetingState.remoteTracks.filter((rt) => rt.source === 'camera'));
 
 	async function leaveMeeting() {
-		room?.disconnect();
+		await meetingState.disconnect();
 		goto('/meetings');
 	}
-
-	onDestroy(() => {
-		room?.disconnect();
-	});
 </script>
 
 <div class="meeting-wrapper" class:mobile-chat={chatOpen}>
@@ -232,61 +67,74 @@
 						{data.meeting.status}
 					</Tag>
 					<span class="participant-count">
-						{participants.length} participant{participants.length !== 1 ? 's' : ''}
+						{meetingState.participants.length} participant{meetingState.participants.length !== 1
+							? 's'
+							: ''}
 					</span>
 				</div>
 			</div>
 		</div>
 
-		{#if errorMsg}
+		{#if meetingState.errorMsg}
 			<div class="error-notice">
-				<InlineNotification kind="error" title="Connection Error" subtitle={errorMsg} />
+				<InlineNotification
+					kind="error"
+					title="Connection Error"
+					subtitle={meetingState.errorMsg}
+				/>
 			</div>
 		{/if}
 
-		<div class="video-area" class:presenter-mode={screenShareParticipant !== null}>
-			{#if screenShareParticipant !== null}
+		<div class="video-area" class:presenter-mode={meetingState.screenShareParticipant !== null}>
+			{#if meetingState.screenShareParticipant !== null}
 				<div class="screen-share-main" bind:this={screenShareVideoEl}>
+					{#each screenShareTracks as st (st.participantIdentity)}
+						<VideoTrack track={st.track} fit="contain" />
+					{/each}
 					<span class="video-label screen-share-label">
-						{getParticipantName(screenShareParticipant)}'s screen
+						{meetingState.getParticipantName(meetingState.screenShareParticipant)}'s screen
 					</span>
 				</div>
 			{/if}
 
-			<div bind:this={videoGrid} class="video-grid">
+			<div class="video-grid">
 				<div class="video-tile">
-					<video
-						bind:this={localVideoEl}
-						autoplay
-						muted
-						playsinline
-						class="video-element"
-						style="transform: scaleX(-1)"
-					></video>
+					{#if localVideoTrack && meetingState.camEnabled}
+						<VideoTrack track={localVideoTrack} mirror={true} />
+					{:else}
+						<div class="cam-off"></div>
+					{/if}
 					<span class="video-label">You</span>
 				</div>
+
+				{#each cameraTracks as rt (rt.participantIdentity)}
+					<div class="video-tile">
+						<VideoTrack track={rt.track} />
+						<span class="video-label">{rt.participantName}</span>
+					</div>
+				{/each}
 			</div>
 		</div>
 
 		<div class="controls">
 			<Button
-				kind={micEnabled ? 'secondary' : 'danger'}
-				icon={micEnabled ? Microphone : MicrophoneOff}
-				iconDescription={micEnabled ? 'Mute' : 'Unmute'}
-				on:click={toggleMic}
+				kind={meetingState.micEnabled ? 'secondary' : 'danger'}
+				icon={meetingState.micEnabled ? Microphone : MicrophoneOff}
+				iconDescription={meetingState.micEnabled ? 'Mute' : 'Unmute'}
+				on:click={() => meetingState.toggleMic()}
 			/>
 			<Button
-				kind={camEnabled ? 'secondary' : 'danger'}
-				icon={camEnabled ? VideoChat : VideoOff}
-				iconDescription={camEnabled ? 'Camera off' : 'Camera on'}
-				on:click={toggleCam}
+				kind={meetingState.camEnabled ? 'secondary' : 'danger'}
+				icon={meetingState.camEnabled ? VideoChat : VideoOff}
+				iconDescription={meetingState.camEnabled ? 'Camera off' : 'Camera on'}
+				on:click={() => meetingState.toggleCam()}
 			/>
 			<Button
-				kind={screenShareEnabled ? 'danger' : 'secondary'}
-				icon={screenShareEnabled ? ScreenOff : Screen}
-				iconDescription={screenShareEnabled ? 'Stop sharing' : 'Share screen'}
-				on:click={toggleScreenShare}
-				disabled={!connected}
+				kind={meetingState.screenShareEnabled ? 'danger' : 'secondary'}
+				icon={meetingState.screenShareEnabled ? ScreenOff : Screen}
+				iconDescription={meetingState.screenShareEnabled ? 'Stop sharing' : 'Share screen'}
+				on:click={() => meetingState.toggleScreenShare()}
+				disabled={!meetingState.connected}
 			/>
 			{#if data.teamChannels.length > 0}
 				<Button
@@ -376,10 +224,9 @@
 		background: var(--cds-background-inverse);
 	}
 
-	.video-element {
+	.cam-off {
 		width: 100%;
 		height: 100%;
-		object-fit: cover;
 	}
 
 	.video-label {
