@@ -8,12 +8,6 @@ import { notificationBus } from '$lib/server/notifications';
 import { uploadFile, deleteFile as deleteStorageFile } from '$lib/server/seaweedfs';
 import { eq, and, desc, gt } from 'drizzle-orm';
 
-export const config = {
-	body: {
-		maxSize: '100m'
-	}
-};
-
 export const GET: RequestHandler = async ({ url, locals }) => {
 	if (!locals.user) throw error(401, 'Not authenticated');
 
