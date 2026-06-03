@@ -58,7 +58,10 @@
 	a.bx--side-nav__link:not(.bx--side-nav__link--current):not([aria-current='page']):hover,
 .bx--side-nav a.bx--header__menu-item:hover,
 .bx--side-nav .bx--header__menu-title[aria-expanded='true']:hover,
-.bx--side-nav .bx--header__menu-title[aria-expanded='true'] + .bx--header__menu a.bx--header__menu-item:hover {
+.bx--side-nav
+	.bx--header__menu-title[aria-expanded='true']
+	+ .bx--header__menu
+	a.bx--header__menu-item:hover {
 	background-color: var(--cds-hover-ui, #e5e5e5) !important;
 	color: var(--cds-text-01, #161616) !important;
 }

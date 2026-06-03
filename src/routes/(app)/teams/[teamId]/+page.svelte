@@ -139,11 +139,14 @@
 							rows={3}
 						/>
 						<div class="edit-actions">
-							<Button size="small" type="submit" icon={Checkmark}>Save</Button>
+							<Button size="small" type="submit" icon={Checkmark} iconDescription="Save description"
+								>Save</Button
+							>
 							<Button
 								size="small"
 								kind="ghost"
 								icon={Close}
+								iconDescription="Cancel"
 								on:click={() => (editingDescription = false)}>Cancel</Button
 							>
 						</div>
@@ -180,7 +183,12 @@
 			<div class="section-header">
 				<h3>Members</h3>
 				{#if isOwnerOrAdmin}
-					<Button size="small" icon={UserFollow} on:click={() => (showAddMemberModal = true)}>
+					<Button
+						size="small"
+						icon={UserFollow}
+						iconDescription="Add member"
+						on:click={() => (showAddMemberModal = true)}
+					>
 						Add Member
 					</Button>
 				{/if}

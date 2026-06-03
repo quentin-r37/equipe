@@ -22,7 +22,9 @@
 
 <div class="page-header">
 	<h1>Meetings</h1>
-	<Button icon={Add} on:click={() => (showModal = true)}>New Meeting</Button>
+	<Button icon={Add} iconDescription="New meeting" on:click={() => (showModal = true)}
+		>New Meeting</Button
+	>
 </div>
 
 {#if data.meetings.length === 0}
@@ -43,7 +45,12 @@
 							{m.status}
 						</Tag>
 						{#if m.status === 'active'}
-							<Button size="small" icon={VideoChat} href="/meetings/{m.id}">Join</Button>
+							<Button
+								size="small"
+								icon={VideoChat}
+								iconDescription="Join meeting"
+								href="/meetings/{m.id}">Join</Button
+							>
 						{/if}
 						<form method="post" action="?/delete" use:enhance>
 							<input type="hidden" name="meetingId" value={m.id} />

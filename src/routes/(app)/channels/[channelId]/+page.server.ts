@@ -20,9 +20,7 @@ export const load: PageServerLoad = async (event) => {
 	const [membership] = await db
 		.select()
 		.from(teamMember)
-		.where(
-			and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, event.locals.user.id))
-		)
+		.where(and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, event.locals.user.id)))
 		.limit(1);
 	if (!membership) throw error(403, 'Not a member of this team');
 

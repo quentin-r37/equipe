@@ -20,11 +20,17 @@
 	function getTitle(n: AppNotification): string {
 		switch (n.type) {
 			case 'new_message':
-				return m.notification_new_message({ userName: n.userName, channelName: n.channelName ?? '' });
+				return m.notification_new_message({
+					userName: n.userName,
+					channelName: n.channelName ?? ''
+				});
 			case 'new_file':
 				return m.notification_new_file({ userName: n.userName, channelName: n.channelName ?? '' });
 			case 'new_meeting':
-				return m.notification_new_meeting({ userName: n.userName, meetingTitle: n.meetingTitle ?? '' });
+				return m.notification_new_meeting({
+					userName: n.userName,
+					meetingTitle: n.meetingTitle ?? ''
+				});
 			default:
 				return '';
 		}

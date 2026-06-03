@@ -27,7 +27,11 @@
 				<Document size={32} />
 				<p class="share-name">{data.name}</p>
 				<p class="share-meta">{formatSize(data.size)}</p>
-				<Button icon={Download} href={`/api/share/${data.token}`}>{m.share_download()}</Button>
+				<Button
+					icon={Download}
+					iconDescription={m.share_download()}
+					href={`/api/share/${data.token}`}>{m.share_download()}</Button
+				>
 			</div>
 		{/if}
 	</Tile>

@@ -64,7 +64,9 @@
 <div class="page-header">
 	<h1>Files</h1>
 	{#if data.teams.length > 0}
-		<Button icon={Add} on:click={() => (showUploadModal = true)}>Upload File</Button>
+		<Button icon={Add} iconDescription="Upload file" on:click={() => (showUploadModal = true)}
+			>Upload File</Button
+		>
 	{/if}
 </div>
 

@@ -63,7 +63,12 @@
 <div class="files-container">
 	<div class="page-header">
 		<h3>Files</h3>
-		<Button size="small" icon={Add} on:click={() => (showUploadModal = true)}>Upload</Button>
+		<Button
+			size="small"
+			icon={Add}
+			iconDescription="Upload file"
+			on:click={() => (showUploadModal = true)}>Upload</Button
+		>
 	</div>
 
 	{#if data.files.length === 0}

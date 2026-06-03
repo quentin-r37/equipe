@@ -143,11 +143,22 @@
 				<h3>Teams & Channels</h3>
 				<div class="section-actions">
 					{#if data.teams.length > 0}
-						<Button size="small" kind="ghost" icon={Add} on:click={() => (showChannelModal = true)}>
+						<Button
+							size="small"
+							kind="ghost"
+							icon={Add}
+							iconDescription="Add channel"
+							on:click={() => (showChannelModal = true)}
+						>
 							Channel
 						</Button>
 					{/if}
-					<Button size="small" icon={Add} on:click={() => (showTeamModal = true)}>Team</Button>
+					<Button
+						size="small"
+						icon={Add}
+						iconDescription="Create team"
+						on:click={() => (showTeamModal = true)}>Team</Button
+					>
 				</div>
 			</div>
 
@@ -157,7 +168,9 @@
 						<Group size={32} />
 						<h4>No teams yet</h4>
 						<p>Create your first team to start collaborating with your colleagues.</p>
-						<Button icon={Add} on:click={() => (showTeamModal = true)}>Create Team</Button>
+						<Button icon={Add} iconDescription="Create team" on:click={() => (showTeamModal = true)}
+							>Create Team</Button
+						>
 					</div>
 				</Tile>
 			{:else}
@@ -229,7 +242,7 @@
 			<!-- Active Meetings -->
 			<div class="section-header">
 				<h3>Active Meetings</h3>
-				<Button size="small" icon={Add} href="/meetings">New</Button>
+				<Button size="small" icon={Add} iconDescription="New meeting" href="/meetings">New</Button>
 			</div>
 
 			{#if data.activeMeetings.length === 0}
@@ -237,7 +250,13 @@
 					<div class="empty-state-small">
 						<VideoChat size={32} />
 						<p>No active meetings right now.</p>
-						<Button size="small" kind="ghost" icon={ArrowRight} href="/meetings">
+						<Button
+							size="small"
+							kind="ghost"
+							icon={ArrowRight}
+							iconDescription="Go to meetings"
+							href="/meetings"
+						>
 							Go to Meetings
 						</Button>
 					</div>
