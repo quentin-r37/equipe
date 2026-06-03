@@ -61,7 +61,7 @@
 		padding: var(--cds-spacing-05) 0;
 	}
 
-	.share-state :global(svg) {
+	.share-state > :global(svg) {
 		color: var(--cds-icon-secondary);
 	}
 
