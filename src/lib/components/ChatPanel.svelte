@@ -8,6 +8,9 @@
 	import Edit from 'carbon-icons-svelte/lib/Edit.svelte';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import Checkmark from 'carbon-icons-svelte/lib/Checkmark.svelte';
+	import Share from 'carbon-icons-svelte/lib/Share.svelte';
+	import ShareFileModal from '$lib/components/ShareFileModal.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	interface ChatFile {
 		id: string;
@@ -51,6 +54,15 @@
 	let editingId = $state<string | null>(null);
 	let editContent = $state('');
 
+	// Share state
+	let showShareModal = $state(false);
+	let shareFileId = $state('');
+
+	function openShare(id: string) {
+		shareFileId = id;
+		showShareModal = true;
+	}
+
 	function scrollToBottom() {
 		if (messagesContainer) {
 			messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -81,7 +93,10 @@
 		function getLatestTimestamp(): string | undefined {
 			const all = [...loadedMessages, ...sseMessages];
 			if (all.length === 0) return undefined;
-			return all.reduce((latest, m) => (m.createdAt > latest ? m.createdAt : latest), all[0].createdAt);
+			return all.reduce(
+				(latest, m) => (m.createdAt > latest ? m.createdAt : latest),
+				all[0].createdAt
+			);
 		}
 
 		async function fetchMissedMessages() {
@@ -93,8 +108,7 @@
 				const msgs: ChatMessage[] = await res.json();
 				for (const msg of msgs) {
 					const isDuplicate =
-						sseMessages.some((m) => m.id === msg.id) ||
-						loadedMessages.some((m) => m.id === msg.id);
+						sseMessages.some((m) => m.id === msg.id) || loadedMessages.some((m) => m.id === msg.id);
 					if (!isDuplicate) {
 						sseMessages = [...sseMessages, msg];
 					}
@@ -112,8 +126,7 @@
 			es.addEventListener('message', (event) => {
 				const msg: ChatMessage = JSON.parse(event.data);
 				const isDuplicate =
-					sseMessages.some((m) => m.id === msg.id) ||
-					loadedMessages.some((m) => m.id === msg.id);
+					sseMessages.some((m) => m.id === msg.id) || loadedMessages.some((m) => m.id === msg.id);
 				if (!isDuplicate) {
 					sseMessages = [...sseMessages, msg];
 					requestAnimationFrame(scrollToBottom);
@@ -456,6 +469,13 @@
 												<span class="file-size">{formatSize(f.size)}</span>
 											</a>
 										{/if}
+										<button
+											class="file-share-btn"
+											title={m.share_file()}
+											onclick={() => openShare(f.id)}
+										>
+											<Share size={16} />
+										</button>
 										{#if isOwn(msg)}
 											<button
 												class="file-remove-btn"
@@ -535,6 +555,8 @@
 		</div>
 	</div>
 </div>
+
+<ShareFileModal bind:open={showShareModal} fileId={shareFileId} />
 
 <style>
 	.chat-container {
@@ -764,6 +786,44 @@
 
 	.message.own .file-remove-btn:hover {
 		color: #ff8389;
+		background: rgba(255, 255, 255, 0.3);
+	}
+
+	.file-share-btn {
+		position: absolute;
+		top: 4px;
+		right: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--cds-layer-01);
+		border: 1px solid var(--cds-border-subtle);
+		border-radius: 50%;
+		cursor: pointer;
+		color: var(--cds-text-secondary);
+		padding: 2px;
+		opacity: 0;
+		transition: opacity 0.15s;
+	}
+
+	/* Shift the share button left to make room for the remove button on own messages. */
+	.message.own .file-share-btn {
+		right: 32px;
+		background: rgba(255, 255, 255, 0.2);
+		border-color: rgba(255, 255, 255, 0.3);
+		color: #fff;
+	}
+
+	.file-wrapper:hover .file-share-btn {
+		opacity: 1;
+	}
+
+	.file-share-btn:hover {
+		color: var(--cds-link-primary);
+		background: var(--cds-layer-hover-01);
+	}
+
+	.message.own .file-share-btn:hover {
 		background: rgba(255, 255, 255, 0.3);
 	}
 

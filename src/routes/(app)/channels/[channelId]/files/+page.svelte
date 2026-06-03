@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Tile, Modal } from 'carbon-components-svelte';
+	import { Button, Tile, Modal, Tag } from 'carbon-components-svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
 	import Download from 'carbon-icons-svelte/lib/Download.svelte';
+	import Share from 'carbon-icons-svelte/lib/Share.svelte';
+	import ShareFileModal from '$lib/components/ShareFileModal.svelte';
+	import * as m from '$lib/paraglide/messages';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import DocumentMultiple01 from 'carbon-icons-svelte/lib/DocumentMultiple_01.svelte';
 	import ImageIcon from 'carbon-icons-svelte/lib/Image.svelte';
@@ -21,6 +24,13 @@
 	let { data }: { data: PageData } = $props();
 
 	let showUploadModal = $state(false);
+	let showShareModal = $state(false);
+	let shareFileId = $state('');
+
+	function openShare(id: string) {
+		shareFileId = id;
+		showShareModal = true;
+	}
 
 	function formatSize(bytes: number): string {
 		if (bytes < 1024) return `${bytes} B`;
@@ -33,13 +43,18 @@
 		if (mime.startsWith('video/')) return DocumentVideo;
 		if (mime.startsWith('audio/')) return Music;
 		if (mime.includes('pdf')) return DocumentPdf;
-		if (mime.includes('zip') || mime.includes('tar') || mime.includes('gzip'))
-			return ZipReference;
-		if (mime.includes('word') || mime.includes('opendocument.text'))
-			return DocumentWordProcessor;
+		if (mime.includes('zip') || mime.includes('tar') || mime.includes('gzip')) return ZipReference;
+		if (mime.includes('word') || mime.includes('opendocument.text')) return DocumentWordProcessor;
 		if (mime.includes('spreadsheet') || mime.includes('excel')) return DataTable;
 		if (mime.includes('presentation') || mime.includes('powerpoint')) return PresentationFile;
-		if (mime.includes('javascript') || mime.includes('json') || mime.includes('xml') || mime.includes('html') || mime.includes('css') || mime.includes('typescript'))
+		if (
+			mime.includes('javascript') ||
+			mime.includes('json') ||
+			mime.includes('xml') ||
+			mime.includes('html') ||
+			mime.includes('css') ||
+			mime.includes('typescript')
+		)
 			return Code;
 		return Document;
 	}
@@ -69,7 +84,14 @@
 								<Icon size={24} />
 							</span>
 							<div>
-								<p class="file-name">{f.name}</p>
+								<p class="file-name">
+									{f.name}
+									{#if f.shareCount > 0}
+										<Tag size="sm" type="green" icon={Share}>
+											{m.share_shared({ count: f.shareCount })}
+										</Tag>
+									{/if}
+								</p>
 								<p class="file-meta">
 									{formatSize(f.size)} &middot; {f.userName} &middot;
 									{new Date(f.createdAt).toLocaleDateString()}
@@ -77,6 +99,13 @@
 							</div>
 						</div>
 						<div class="file-actions">
+							<Button
+								size="small"
+								kind="ghost"
+								icon={Share}
+								iconDescription={m.share_file()}
+								on:click={() => openShare(f.id)}
+							/>
 							<Button
 								size="small"
 								kind="ghost"
@@ -129,6 +158,8 @@
 		</div>
 	</form>
 </Modal>
+
+<ShareFileModal bind:open={showShareModal} fileId={shareFileId} />
 
 <style>
 	.files-container {

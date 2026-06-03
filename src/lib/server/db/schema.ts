@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, serial } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, serial, boolean } from 'drizzle-orm/pg-core';
 
 // ── Legacy demo table ──────────────────────────────────────────────
 export const task = pgTable('task', {
@@ -88,6 +88,24 @@ export const file = pgTable('file', {
 	size: integer('size').notNull(),
 	mimeType: text('mime_type').notNull(),
 	storagePath: text('storage_path').notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull()
+});
+
+// ── File Shares ────────────────────────────────────────────────────
+export const fileShare = pgTable('file_share', {
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	fileId: text('file_id')
+		.notNull()
+		.references(() => file.id, { onDelete: 'cascade' }),
+	token: text('token')
+		.notNull()
+		.$defaultFn(() => crypto.randomUUID()),
+	expiresAt: timestamp('expires_at'), // null for one-time shares
+	oneTime: boolean('one_time').notNull().default(false),
+	downloadCount: integer('download_count').notNull().default(0),
+	createdBy: text('created_by').notNull(),
 	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 

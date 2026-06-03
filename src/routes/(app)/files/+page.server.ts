@@ -4,6 +4,7 @@ import { db } from '$lib/server/db';
 import { file, teamMember } from '$lib/server/db/schema';
 import { eq, desc, and, inArray } from 'drizzle-orm';
 import { uploadFile, deleteFile } from '$lib/server/seaweedfs';
+import { countActiveSharesByFile } from '$lib/server/fileShare';
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) throw redirect(302, '/login');
@@ -28,10 +29,13 @@ export const load: PageServerLoad = async (event) => {
 					.limit(100)
 			: [];
 
+	const shareCounts = await countActiveSharesByFile(files.map((f) => f.id));
+
 	return {
 		files: files.map((f) => ({
 			...f,
-			createdAt: f.createdAt.toISOString()
+			createdAt: f.createdAt.toISOString(),
+			shareCount: shareCounts.get(f.id) ?? 0
 		}))
 	};
 };

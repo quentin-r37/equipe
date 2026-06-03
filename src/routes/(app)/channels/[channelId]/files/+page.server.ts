@@ -4,6 +4,7 @@ import { db } from '$lib/server/db';
 import { channel, file, teamMember } from '$lib/server/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { uploadFile, deleteFile } from '$lib/server/seaweedfs';
+import { countActiveSharesByFile } from '$lib/server/fileShare';
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) throw redirect(302, '/login');
@@ -21,9 +22,7 @@ export const load: PageServerLoad = async (event) => {
 	const [membership] = await db
 		.select()
 		.from(teamMember)
-		.where(
-			and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, event.locals.user.id))
-		)
+		.where(and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, event.locals.user.id)))
 		.limit(1);
 	if (!membership) throw error(403, 'Not a member of this team');
 
@@ -34,10 +33,13 @@ export const load: PageServerLoad = async (event) => {
 		.orderBy(desc(file.createdAt))
 		.limit(100);
 
+	const shareCounts = await countActiveSharesByFile(files.map((f) => f.id));
+
 	return {
 		files: files.map((f) => ({
 			...f,
-			createdAt: f.createdAt.toISOString()
+			createdAt: f.createdAt.toISOString(),
+			shareCount: shareCounts.get(f.id) ?? 0
 		}))
 	};
 };
@@ -59,9 +61,7 @@ export const actions: Actions = {
 		const [membership] = await db
 			.select()
 			.from(teamMember)
-			.where(
-				and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, event.locals.user.id))
-			)
+			.where(and(eq(teamMember.teamId, ch.teamId), eq(teamMember.userId, event.locals.user.id)))
 			.limit(1);
 		if (!membership) return fail(403, { message: 'Not a team member' });
 
