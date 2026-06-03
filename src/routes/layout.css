@@ -122,6 +122,21 @@ a.bx--side-nav__link--current .bx--side-nav__link-text {
 }
 
 /*
+ * Button icon spacing.
+ *
+ * We trigger the hover tooltip on labeled buttons by passing `iconDescription`,
+ * which makes Carbon render them as "icon-only" and hard-set the icon's
+ * margin-left to 0 inline (Button.svelte). For buttons that still show a text
+ * label we add the `btn--labeled` class to restore a comfortable gap between
+ * the label and the icon. `!important` is required to beat the inline style.
+ * Plain labeled buttons (not icon-only) get the same gap for consistency.
+ */
+.bx--btn:not(.bx--btn--icon-only) .bx--btn__icon,
+.bx--btn--icon-only.btn--labeled .bx--btn__icon {
+	margin-left: var(--cds-spacing-03) !important;
+}
+
+/*
  * Carbon-compliant scrollbar styles
  * Thin, subtle scrollbars using Carbon Design System tokens.
  *

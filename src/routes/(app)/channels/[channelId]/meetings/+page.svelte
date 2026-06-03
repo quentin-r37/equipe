@@ -16,6 +16,7 @@
 		<h3>Meetings</h3>
 		<Button
 			size="small"
+			class="btn--labeled"
 			icon={Add}
 			iconDescription="New meeting"
 			on:click={() => (showModal = true)}>New Meeting</Button
@@ -42,6 +43,7 @@
 							{#if m.status === 'active'}
 								<Button
 									size="small"
+									class="btn--labeled"
 									icon={VideoChat}
 									iconDescription="Join meeting"
 									href="/meetings/{m.id}">Join</Button

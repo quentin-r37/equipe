@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Modal, Select, SelectItem, Button, InlineLoading, Tag } from 'carbon-components-svelte';
+	import { Modal, Select, SelectItem, Button, InlineLoading } from 'carbon-components-svelte';
 	import Copy from 'carbon-icons-svelte/lib/Copy.svelte';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import * as m from '$lib/paraglide/messages';
@@ -85,11 +85,15 @@
 		copiedId = share.id;
 	}
 
-	function expiryLabel(share: ShareDTO): string {
-		if (share.oneTime) return m.share_active_onetime();
-		if (share.expiresAt)
-			return m.share_active_expires({ date: new Date(share.expiresAt).toLocaleString() });
-		return '';
+	// Build the secondary metadata line shown under each link: expiry (or
+	// one-time) and the download count, joined by a middle dot.
+	function metaLabel(share: ShareDTO): string {
+		const parts: string[] = [];
+		if (share.oneTime) parts.push(m.share_active_onetime());
+		else if (share.expiresAt)
+			parts.push(m.share_active_expires({ date: new Date(share.expiresAt).toLocaleString() }));
+		parts.push(m.share_active_downloads({ count: share.downloadCount }));
+		return parts.join(' · ');
 	}
 </script>
 
@@ -101,6 +105,20 @@
 	on:close={close}
 >
 	<div class="share-modal">
+		<section class="share-create">
+			<Select bind:selected={duration} labelText={m.share_duration_label()}>
+				<SelectItem value="hour" text={m.share_duration_hour()} />
+				<SelectItem value="day" text={m.share_duration_day()} />
+				<SelectItem value="week" text={m.share_duration_week()} />
+				<SelectItem value="onetime" text={m.share_duration_onetime()} />
+			</Select>
+			<Button on:click={createLink} disabled={creating}>{m.share_create_link()}</Button>
+		</section>
+
+		{#if errorMsg}
+			<p class="share-error">{errorMsg}</p>
+		{/if}
+
 		<section class="share-links">
 			<h6>{m.share_active_links()}</h6>
 			{#if loadingShares}
@@ -113,7 +131,7 @@
 						<li class="link-item">
 							<div class="link-info">
 								<span class="link-url" title={s.url}>{s.url}</span>
-								<Tag size="sm" type="cool-gray">{expiryLabel(s)}</Tag>
+								<span class="link-meta">{metaLabel(s)}</span>
 							</div>
 							<div class="link-actions">
 								<Button
@@ -136,20 +154,6 @@
 				</ul>
 			{/if}
 		</section>
-
-		<section class="share-create">
-			<Select bind:selected={duration} labelText={m.share_duration_label()}>
-				<SelectItem value="hour" text={m.share_duration_hour()} />
-				<SelectItem value="day" text={m.share_duration_day()} />
-				<SelectItem value="week" text={m.share_duration_week()} />
-				<SelectItem value="onetime" text={m.share_duration_onetime()} />
-			</Select>
-			<Button on:click={createLink} disabled={creating}>{m.share_create_link()}</Button>
-		</section>
-
-		{#if errorMsg}
-			<p class="share-error">{errorMsg}</p>
-		{/if}
 	</div>
 </Modal>
 
@@ -172,7 +176,6 @@
 	.link-list {
 		display: flex;
 		flex-direction: column;
-		gap: var(--cds-spacing-02);
 	}
 
 	.link-item {
@@ -180,15 +183,18 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--cds-spacing-03);
-		padding: var(--cds-spacing-03);
-		background: var(--cds-layer-01);
-		border-radius: 4px;
+		padding: var(--cds-spacing-03) 0;
+		border-bottom: 1px solid var(--cds-border-subtle-01);
+	}
+
+	.link-item:last-child {
+		border-bottom: none;
 	}
 
 	.link-info {
 		display: flex;
 		flex-direction: column;
-		gap: var(--cds-spacing-02);
+		gap: var(--cds-spacing-01);
 		min-width: 0;
 	}
 
@@ -198,6 +204,11 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.link-meta {
+		font-size: 0.75rem;
+		color: var(--cds-text-secondary);
 	}
 
 	.link-actions {

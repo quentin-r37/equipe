@@ -28,6 +28,7 @@
 				<p class="share-name">{data.name}</p>
 				<p class="share-meta">{formatSize(data.size)}</p>
 				<Button
+					class="btn--labeled"
 					icon={Download}
 					iconDescription={m.share_download()}
 					href={`/api/share/${data.token}`}>{m.share_download()}</Button

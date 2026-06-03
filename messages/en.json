@@ -22,5 +22,6 @@
 	"share_revoke": "Revoke",
 	"share_active_onetime": "One-time",
 	"share_active_expires": "Until {date}",
+	"share_active_downloads": "{count} download(s)",
 	"share_shared": "Shared ({count})"
 }

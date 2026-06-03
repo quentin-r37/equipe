@@ -22,8 +22,11 @@
 
 <div class="page-header">
 	<h1>Meetings</h1>
-	<Button icon={Add} iconDescription="New meeting" on:click={() => (showModal = true)}
-		>New Meeting</Button
+	<Button
+		class="btn--labeled"
+		icon={Add}
+		iconDescription="New meeting"
+		on:click={() => (showModal = true)}>New Meeting</Button
 	>
 </div>
 
@@ -47,6 +50,7 @@
 						{#if m.status === 'active'}
 							<Button
 								size="small"
+								class="btn--labeled"
 								icon={VideoChat}
 								iconDescription="Join meeting"
 								href="/meetings/{m.id}">Join</Button

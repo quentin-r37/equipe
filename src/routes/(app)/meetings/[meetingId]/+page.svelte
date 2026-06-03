@@ -166,6 +166,7 @@
 			{/if}
 			<Button
 				kind="danger"
+				class="btn--labeled"
 				icon={PhoneBlockFilled}
 				iconDescription="Leave meeting"
 				on:click={leaveMeeting}

@@ -65,6 +65,7 @@
 		<h3>Files</h3>
 		<Button
 			size="small"
+			class="btn--labeled"
 			icon={Add}
 			iconDescription="Upload file"
 			on:click={() => (showUploadModal = true)}>Upload</Button

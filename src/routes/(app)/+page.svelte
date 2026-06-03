@@ -146,6 +146,7 @@
 						<Button
 							size="small"
 							kind="ghost"
+							class="btn--labeled"
 							icon={Add}
 							iconDescription="Add channel"
 							on:click={() => (showChannelModal = true)}
@@ -155,6 +156,7 @@
 					{/if}
 					<Button
 						size="small"
+						class="btn--labeled"
 						icon={Add}
 						iconDescription="Create team"
 						on:click={() => (showTeamModal = true)}>Team</Button
@@ -168,8 +170,11 @@
 						<Group size={32} />
 						<h4>No teams yet</h4>
 						<p>Create your first team to start collaborating with your colleagues.</p>
-						<Button icon={Add} iconDescription="Create team" on:click={() => (showTeamModal = true)}
-							>Create Team</Button
+						<Button
+							class="btn--labeled"
+							icon={Add}
+							iconDescription="Create team"
+							on:click={() => (showTeamModal = true)}>Create Team</Button
 						>
 					</div>
 				</Tile>
@@ -242,7 +247,13 @@
 			<!-- Active Meetings -->
 			<div class="section-header">
 				<h3>Active Meetings</h3>
-				<Button size="small" icon={Add} iconDescription="New meeting" href="/meetings">New</Button>
+				<Button
+					size="small"
+					class="btn--labeled"
+					icon={Add}
+					iconDescription="New meeting"
+					href="/meetings">New</Button
+				>
 			</div>
 
 			{#if data.activeMeetings.length === 0}
@@ -253,6 +264,7 @@
 						<Button
 							size="small"
 							kind="ghost"
+							class="btn--labeled"
 							icon={ArrowRight}
 							iconDescription="Go to meetings"
 							href="/meetings"

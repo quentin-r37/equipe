@@ -139,12 +139,17 @@
 							rows={3}
 						/>
 						<div class="edit-actions">
-							<Button size="small" type="submit" icon={Checkmark} iconDescription="Save description"
-								>Save</Button
+							<Button
+								size="small"
+								type="submit"
+								class="btn--labeled"
+								icon={Checkmark}
+								iconDescription="Save description">Save</Button
 							>
 							<Button
 								size="small"
 								kind="ghost"
+								class="btn--labeled"
 								icon={Close}
 								iconDescription="Cancel"
 								on:click={() => (editingDescription = false)}>Cancel</Button
@@ -185,6 +190,7 @@
 				{#if isOwnerOrAdmin}
 					<Button
 						size="small"
+						class="btn--labeled"
 						icon={UserFollow}
 						iconDescription="Add member"
 						on:click={() => (showAddMemberModal = true)}
