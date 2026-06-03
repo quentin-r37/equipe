@@ -56,8 +56,5 @@
 		"carbon-icons-svelte": "^13.11.0",
 		"livekit-client": "^2.19.1",
 		"livekit-server-sdk": "^2.15.4"
-	},
-	"overrides": {
-		"@better-auth/core": "1.5.5"
 	}
 }
