@@ -2,6 +2,7 @@
 	import { Modal, Select, SelectItem, Button, InlineLoading } from 'carbon-components-svelte';
 	import Copy from 'carbon-icons-svelte/lib/Copy.svelte';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
+	import { invalidateAll } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
 
 	type ShareDTO = {
@@ -62,6 +63,8 @@
 			if (!res.ok) throw new Error(String(res.status));
 			const created: ShareDTO = await res.json();
 			shares = [created, ...shares];
+			// Refresh the page load data so the file's "Shared (N)" badge updates.
+			await invalidateAll();
 		} catch {
 			errorMsg = m.share_error();
 		} finally {
@@ -75,6 +78,8 @@
 			const res = await fetch(`/api/files/share?id=${id}`, { method: 'DELETE' });
 			if (!res.ok) throw new Error(String(res.status));
 			shares = shares.filter((s) => s.id !== id);
+			// Refresh the page load data so the file's "Shared (N)" badge updates.
+			await invalidateAll();
 		} catch {
 			errorMsg = m.share_error();
 		}
