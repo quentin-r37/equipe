@@ -143,6 +143,7 @@
 									kind="ghost"
 									size="small"
 									icon={Copy}
+									tooltipPosition="top"
 									iconDescription={copiedId === s.id ? m.share_link_copied() : m.share_copy_link()}
 									on:click={() => copyLink(s)}
 								/>
@@ -150,6 +151,7 @@
 									kind="danger-ghost"
 									size="small"
 									icon={TrashCan}
+									tooltipPosition="top"
 									iconDescription={m.share_revoke()}
 									on:click={() => revoke(s.id)}
 								/>
