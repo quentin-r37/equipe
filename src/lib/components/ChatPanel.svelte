@@ -870,6 +870,8 @@
 		align-items: center;
 		gap: var(--cds-spacing-03);
 		padding: var(--cds-spacing-03) var(--cds-spacing-04);
+		/* Reserve space on the right so the hover share button doesn't cover the name/size. */
+		padding-right: 40px;
 		background: var(--cds-layer-01);
 		border: 1px solid var(--cds-border-subtle);
 		border-radius: 4px;
@@ -884,6 +886,8 @@
 	}
 
 	.message.own .file-attachment {
+		/* Own messages show both share + remove buttons, so reserve more room. */
+		padding-right: 68px;
 		background: rgba(255, 255, 255, 0.15);
 		border-color: rgba(255, 255, 255, 0.3);
 		color: #fff;
