@@ -4,6 +4,7 @@ import { db } from '$lib/server/db';
 import { fileShare } from '$lib/server/db/schema';
 import { downloadFile } from '$lib/server/seaweedfs';
 import { resolveActiveShare } from '$lib/server/fileShare';
+import { contentDisposition } from '$lib/server/http';
 import { eq, sql } from 'drizzle-orm';
 
 // Public, unauthenticated download endpoint for an anonymous share link.
@@ -25,7 +26,7 @@ export const GET: RequestHandler = async ({ params }) => {
 	return new Response(blob, {
 		headers: {
 			'Content-Type': fileRecord.mimeType,
-			'Content-Disposition': `attachment; filename="${fileRecord.name}"`,
+			'Content-Disposition': contentDisposition('attachment', fileRecord.name),
 			'Content-Length': String(fileRecord.size)
 		}
 	});

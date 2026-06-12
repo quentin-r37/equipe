@@ -5,6 +5,7 @@ import { db } from '$lib/server/db';
 import { file, message, teamMember } from '$lib/server/db/schema';
 import { eq, and, ne } from 'drizzle-orm';
 import { messageBus } from '$lib/server/messages';
+import { contentDisposition } from '$lib/server/http';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
 	if (!locals.user) throw error(401, 'Not authenticated');
@@ -27,9 +28,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const blob = await response.blob();
 
 	const inline = url.searchParams.get('inline') === '1';
-	const disposition = inline
-		? `inline; filename="${fileRecord.name}"`
-		: `attachment; filename="${fileRecord.name}"`;
+	const disposition = contentDisposition(inline ? 'inline' : 'attachment', fileRecord.name);
 
 	return new Response(blob, {
 		headers: {
