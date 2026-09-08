@@ -114,7 +114,8 @@
 						<SideNavMenuItem
 							href="/channels/{ch.id}"
 							text="# {ch.name}"
-							isSelected={pathname === `/channels/${ch.id}`}
+							isSelected={pathname === `/channels/${ch.id}` ||
+								pathname.startsWith(`/channels/${ch.id}/`)}
 						/>
 					{/each}
 					<SideNavMenuItem

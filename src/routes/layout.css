@@ -34,12 +34,35 @@
 
 /* Base background & text */
 .bx--side-nav {
+	border-right: 1px solid var(--cds-ui-03, #e0e0e0);
 	background-color: var(--cds-ui-background, #fff) !important;
 	color: var(--cds-text-02, #525252) !important;
 }
 
 .bx--side-nav__footer {
 	background-color: var(--cds-ui-background, #fff) !important;
+}
+
+/* Shared page rhythm, scoped to the authenticated shell. */
+.bx--content > .page-header {
+	padding-bottom: var(--cds-spacing-06);
+	border-bottom: 1px solid var(--cds-border-subtle);
+}
+
+.bx--content > .page-header h1 {
+	font-size: clamp(1.75rem, 3vw, 2.625rem);
+	font-weight: 300;
+	line-height: 1.2;
+	overflow-wrap: anywhere;
+}
+
+.bx--side-nav__items {
+	padding-top: var(--cds-spacing-05);
+}
+
+.bx--side-nav__divider {
+	margin-top: var(--cds-spacing-05);
+	margin-bottom: var(--cds-spacing-05);
 }
 
 /* Text colors */

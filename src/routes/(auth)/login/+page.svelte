@@ -32,6 +32,7 @@
 		<div class="login-branding">
 			<Logo size={48} />
 			<h1>Equipe</h1>
+			<p>Bring your team together.</p>
 		</div>
 		<Tile>
 			<h2>{mode === 'login' ? 'Sign In' : 'Create Account'}</h2>
@@ -141,6 +142,7 @@
 
 <style>
 	.login-container {
+		padding: var(--cds-spacing-07) var(--cds-spacing-05);
 		min-height: 100vh;
 		min-height: 100dvh;
 		display: flex;
@@ -152,6 +154,18 @@
 	.login-card {
 		width: 100%;
 		max-width: 28rem;
+	}
+
+	.login-card :global(.bx--tile) {
+		padding: var(--cds-spacing-07);
+		border: 1px solid var(--cds-border-subtle);
+		border-top: 3px solid var(--cds-interactive-01);
+		background: var(--cds-ui-background);
+	}
+
+	.login-branding p {
+		font-size: 0.875rem;
+		color: var(--cds-text-secondary);
 	}
 
 	.login-branding {
@@ -183,6 +197,7 @@
 
 	.form-actions {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--cds-spacing-05);
 	}
@@ -248,5 +263,11 @@
 		flex: 1;
 		height: 1px;
 		background: var(--cds-border-subtle);
+	}
+
+	@media (max-width: 400px) {
+		.login-card :global(.bx--tile) {
+			padding: var(--cds-spacing-05);
+		}
 	}
 </style>

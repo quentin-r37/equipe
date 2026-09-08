@@ -106,8 +106,16 @@
 </svelte:head>
 
 <div class="page-header">
-	<h1>Welcome, {data.user.name || data.user.email}</h1>
-	<p class="subtitle">Your collaboration hub</p>
+	<div class="welcome-copy">
+		<p class="eyebrow">Your workspace</p>
+		<h1>Welcome, {data.user.name || data.user.email}</h1>
+		<p class="subtitle">A shared space for your teams, conversations and ideas.</p>
+	</div>
+	<div class="welcome-art" aria-hidden="true">
+		<div><Group size={32} /></div>
+		<div><Chat size={32} /></div>
+		<div><VideoChat size={32} /></div>
+	</div>
 </div>
 
 {#if data.teams.length > 0}
@@ -219,6 +227,9 @@
 					{#each channelsByTeam as t (t.id)}
 						<Tile class="team-card">
 							<div class="team-header">
+								<span class="team-avatar" aria-hidden="true"
+									>{t.name.slice(0, 2).toUpperCase()}</span
+								>
 								<div class="team-info">
 									<h3 class="team-name"><a href="/teams/{t.id}">{t.name}</a></h3>
 									<div class="team-meta">
@@ -491,11 +502,56 @@
 
 <style>
 	.page-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--cds-spacing-07);
+		padding: var(--cds-spacing-07);
 		margin-bottom: var(--cds-spacing-07);
+		background: var(--cds-ui-01);
+		border-left: 4px solid var(--cds-interactive-01);
+	}
+
+	.welcome-copy {
+		min-width: 0;
+	}
+
+	.eyebrow {
+		font-size: 0.75rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--cds-text-secondary);
+		margin-bottom: var(--cds-spacing-04);
+	}
+
+	h1 {
+		font-size: clamp(1.75rem, 3vw, 2.625rem);
+		line-height: 1.2;
+		font-weight: 300;
+		overflow-wrap: anywhere;
+	}
+
+	.welcome-art {
+		display: flex;
+		flex-shrink: 0;
+	}
+
+	.welcome-art > div {
+		display: grid;
+		place-items: center;
+		width: 4rem;
+		height: 4rem;
+		border: 1px solid var(--cds-border-subtle);
+		color: var(--cds-link-primary);
+	}
+
+	.welcome-art > div:nth-child(2) {
+		margin-top: 2rem;
+		background: var(--cds-background-selected);
 	}
 
 	.subtitle {
-		margin-top: var(--cds-spacing-02);
+		margin-top: var(--cds-spacing-04);
 		color: var(--cds-text-secondary);
 		font-size: 0.875rem;
 	}
@@ -503,19 +559,30 @@
 	/* Stats */
 	:global(.stat-tile) {
 		min-height: auto !important;
+		margin-bottom: var(--cds-spacing-07);
+		padding: var(--cds-spacing-06);
+		border-top: 2px solid var(--cds-border-subtle);
 	}
 
 	.stat {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
+		justify-content: space-between;
+		flex-direction: row-reverse;
 		gap: var(--cds-spacing-04);
+	}
+
+	.stat :global(svg) {
+		color: var(--cds-link-primary);
 	}
 
 	.stat-value {
 		display: block;
-		font-size: 1.5rem;
-		font-weight: 600;
+		font-size: 2.625rem;
+		font-weight: 300;
 		line-height: 1.2;
+		margin-bottom: var(--cds-spacing-03);
+		font-variant-numeric: tabular-nums;
 	}
 
 	.stat-label {
@@ -554,16 +621,32 @@
 	}
 
 	:global(.team-card) {
-		padding: var(--cds-spacing-05) !important;
+		padding: var(--cds-spacing-06) !important;
+		border: 1px solid var(--cds-border-subtle);
 	}
 
 	.team-header {
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
+		gap: var(--cds-spacing-04);
+	}
+
+	.team-avatar {
+		display: grid;
+		place-items: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		flex-shrink: 0;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--cds-link-primary);
+		background: var(--cds-background-selected);
 	}
 
 	.team-info {
+		flex: 1;
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
 		gap: var(--cds-spacing-03);
@@ -575,6 +658,7 @@
 	}
 
 	.team-name {
+		overflow-wrap: anywhere;
 		margin: 0;
 		font-size: 1rem;
 	}
@@ -589,6 +673,7 @@
 	}
 
 	.team-meta {
+		flex-wrap: wrap;
 		display: flex;
 		gap: var(--cds-spacing-02);
 	}
@@ -613,15 +698,20 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: var(--cds-spacing-02) var(--cds-spacing-03);
-		border-radius: 4px;
+		border-radius: 0;
 		transition: background var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
 	}
 
-	.channel-item:hover {
-		background: var(--cds-layer-01);
+	.channel-item:hover,
+	.channel-item:focus-within {
+		background: var(--cds-hover-ui);
 	}
 
 	.channel-link {
+		flex: 1;
+		min-width: 0;
+		padding: var(--cds-spacing-03) 0;
+		overflow-wrap: anywhere;
 		font-weight: 500;
 		text-decoration: none;
 		color: inherit;
@@ -756,6 +846,7 @@
 	}
 
 	.activity-header {
+		flex-wrap: wrap;
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-03);
@@ -779,6 +870,7 @@
 	}
 
 	.activity-content {
+		overflow-wrap: anywhere;
 		font-size: 0.8125rem;
 		color: var(--cds-text-secondary);
 		margin: 0;
@@ -792,5 +884,31 @@
 
 	.modal-error {
 		margin-bottom: var(--cds-spacing-05);
+	}
+
+	a:focus-visible {
+		outline: 2px solid var(--cds-focus);
+		outline-offset: 2px;
+	}
+
+	@media (max-width: 1056px) {
+		.welcome-art {
+			display: none;
+		}
+	}
+
+	@media (max-width: 672px) {
+		.page-header {
+			padding: var(--cds-spacing-06);
+		}
+
+		:global(.stat-tile) {
+			padding: var(--cds-spacing-05);
+			margin-bottom: var(--cds-spacing-05);
+		}
+
+		.team-header {
+			flex-wrap: wrap;
+		}
 	}
 </style>

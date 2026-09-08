@@ -151,6 +151,8 @@
 
 <style>
 	.channel-layout {
+		background: var(--cds-ui-background);
+		border: 1px solid var(--cds-border-subtle);
 		display: flex;
 		flex-direction: column;
 		height: calc(100vh - 7rem);
@@ -177,6 +179,7 @@
 	}
 
 	.channel-header {
+		background: var(--cds-ui-01);
 		padding: var(--cds-spacing-05) var(--cds-spacing-06);
 		border-bottom: 1px solid var(--cds-border-subtle);
 	}
@@ -189,6 +192,9 @@
 
 	.channel-title h2 {
 		margin: 0;
+		font-size: 1.5rem;
+		font-weight: 400;
+		overflow-wrap: anywhere;
 	}
 
 	.edit-btn {
@@ -269,6 +275,7 @@
 	}
 
 	.tab {
+		min-height: 3rem;
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-03);
@@ -289,6 +296,7 @@
 	}
 
 	.tab.active {
+		background: var(--cds-ui-01);
 		color: var(--cds-text-primary);
 		border-bottom-color: var(--cds-link-primary);
 	}
@@ -298,5 +306,17 @@
 		min-height: 0;
 		display: flex;
 		flex-direction: column;
+	}
+
+	.tab:focus-visible,
+	.icon-btn:focus-visible {
+		outline: 2px solid var(--cds-focus);
+		outline-offset: -2px;
+	}
+
+	@media (hover: none) {
+		.edit-btn {
+			opacity: 1;
+		}
 	}
 </style>
