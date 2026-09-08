@@ -41,6 +41,15 @@
 	const teamName = (teamId: string) => data.teams.find((t) => t.id === teamId)?.name ?? '';
 
 	/*
+	 * Built here rather than in the markup: the separator needs a space on each side, and an
+	 * `{#if}` inline in the template leaves the formatter free to move that whitespace.
+	 */
+	const meetingMeta = (m: { teamId: string; createdAt: string }) =>
+		[data.teams.length > 1 ? teamName(m.teamId) : '', new Date(m.createdAt).toLocaleString()]
+			.filter(Boolean)
+			.join(' · ');
+
+	/*
 	 * The same figures band the dashboard and team pages open with. Each headline counts every
 	 * meeting the user can see; the plot under it counts the ones started per day in the
 	 * window, under that same scope — so "Live now" plots the meetings started recently that
@@ -109,10 +118,7 @@
 						</span>
 						<div class="meeting-info">
 							<p class="meeting-title">{m.title}</p>
-							<p class="meeting-meta">
-								{#if data.teams.length > 1}{teamName(m.teamId)} &middot;
-								{/if}{new Date(m.createdAt).toLocaleString()}
-							</p>
+							<p class="meeting-meta">{meetingMeta(m)}</p>
 						</div>
 						<div class="meeting-actions">
 							<Tag size="sm" type={m.status === 'active' ? 'green' : 'cool-gray'}>
