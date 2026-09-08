@@ -40,7 +40,7 @@
 
 	function open(e: MouseEvent, n: AppNotification) {
 		e.preventDefault();
-		notificationState.dismiss(n.id);
+		notificationState.markRead(n.id);
 		goto(resolve(n.href as Pathname));
 	}
 </script>

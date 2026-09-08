@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { Button, TextArea } from 'carbon-components-svelte';
+	import { Button, TextArea, InlineLoading, InlineNotification } from 'carbon-components-svelte';
 	import SendAlt from 'carbon-icons-svelte/lib/SendAlt.svelte';
 	import ArrowDown from 'carbon-icons-svelte/lib/ArrowDown.svelte';
 	import Attachment from 'carbon-icons-svelte/lib/Attachment.svelte';
@@ -14,6 +14,7 @@
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import { untrack } from 'svelte';
 	import { notificationState } from '$lib/stores/notifications.svelte';
+	import { messageOutbox, type OutgoingMessage } from '$lib/stores/messageOutbox.svelte';
 	import { formatSize, validateUpload } from '$lib/files';
 	import * as m from '$lib/paraglide/messages';
 
@@ -48,7 +49,21 @@
 
 	let loadedMessages = $state<ChatMessage[]>([]);
 	let sseMessages = $state<ChatMessage[]>([]);
-	const messages = $derived([...loadedMessages, ...sseMessages]);
+	const messages = $derived([
+		...loadedMessages,
+		...sseMessages.filter((msg) => !loadedMessages.some((loaded) => loaded.id === msg.id))
+	]);
+	let loading = $state(false);
+	let loadError = $state('');
+	let loadAttempt = $state(0);
+	let connection = $state<'connecting' | 'connected' | 'reconnecting'>('connecting');
+	const outgoing = $derived(messageOutbox.items);
+	$effect(() => {
+		const confirmedIds = new Set(messages.map((msg) => msg.id));
+		untrack(() => {
+			messageOutbox.items = messageOutbox.items.filter((entry) => !confirmedIds.has(entry.id));
+		});
+	});
 	let newMessage = $state('');
 	let pendingFiles = $state<File[]>([]);
 	let sending = $state(false);
@@ -101,26 +116,42 @@
 
 	$effect(() => {
 		const id = channelId;
+		void loadAttempt;
+		const controller = new AbortController();
+		let closed = false;
+		loadError = '';
+		connection = 'connecting';
 		const initial = untrack(() => initialMessages);
 		sseMessages = [];
 		unreadCount = 0;
 
 		if (initial) {
+			loading = false;
 			loadedMessages = [...initial];
 		} else {
 			// Fetch messages via API when no initial data (e.g. meeting chat)
 			loadedMessages = [];
-			fetch(`/api/messages?channelId=${id}`)
-				.then((res) => (res.ok ? res.json() : []))
+			loading = true;
+			fetch(`/api/messages?channelId=${id}`, { signal: controller.signal })
+				.then(async (res) => {
+					if (!res.ok) throw new Error(await responseError(res, 'Messages could not be loaded.'));
+					return res.json();
+				})
 				.then((msgs: ChatMessage[]) => {
+					if (closed) return;
 					loadedMessages = msgs;
 					requestAnimationFrame(scrollToBottom);
+				})
+				.catch((err) => {
+					if (!closed)
+						loadError = err instanceof Error ? err.message : 'Messages could not be loaded.';
+				})
+				.finally(() => {
+					if (!closed) loading = false;
 				});
 		}
 
 		let es: EventSource;
-		let reconnectTimeout: ReturnType<typeof setTimeout>;
-		let closed = false;
 
 		function getLatestTimestamp(): string | undefined {
 			const all = [...loadedMessages, ...sseMessages];
@@ -133,11 +164,14 @@
 
 		async function fetchMissedMessages() {
 			const after = getLatestTimestamp();
-			if (!after) return;
 			try {
-				const res = await fetch(`/api/messages?channelId=${id}&after=${encodeURIComponent(after)}`);
+				const res = await fetch(
+					`/api/messages?channelId=${id}${after ? `&after=${encodeURIComponent(after)}` : ''}`,
+					{ signal: controller.signal }
+				);
 				if (!res.ok) return;
 				const msgs: ChatMessage[] = await res.json();
+				if (closed) return;
 				// Decide before mutating: appending changes scrollHeight.
 				const stick = isNearBottom();
 				let added = 0;
@@ -160,9 +194,16 @@
 		function connect() {
 			if (closed) return;
 			es = new EventSource(`/api/messages/stream?channelId=${id}`);
+			let opened = false;
+			es.onopen = () => {
+				connection = 'connected';
+				if (opened) void fetchMissedMessages();
+				opened = true;
+			};
 
 			es.addEventListener('message', (event) => {
 				const msg: ChatMessage = JSON.parse(event.data);
+				messageOutbox.items = outgoing.filter((entry) => entry.id !== msg.id);
 				const isDuplicate =
 					sseMessages.some((m) => m.id === msg.id) || loadedMessages.some((m) => m.id === msg.id);
 				if (!isDuplicate) {
@@ -199,14 +240,9 @@
 			});
 
 			es.onerror = () => {
-				es.close();
 				if (closed) return;
-				// Fetch messages that may have been sent while disconnected, then reconnect
-				fetchMissedMessages().finally(() => {
-					if (!closed) {
-						reconnectTimeout = setTimeout(connect, 3000);
-					}
-				});
+				connection = 'reconnecting';
+				// Keep EventSource open so its native reconnection also works offline.
 			};
 		}
 
@@ -215,7 +251,7 @@
 
 		return () => {
 			closed = true;
-			clearTimeout(reconnectTimeout);
+			controller.abort();
 			es?.close();
 		};
 	});
@@ -233,50 +269,73 @@
 	}
 
 	async function sendMessage() {
+		if (sending) return;
 		const content = newMessage.trim();
 		if (!content && pendingFiles.length === 0) return;
-
-		sending = true;
-		const draft = newMessage;
+		const item: OutgoingMessage = {
+			id: crypto.randomUUID(),
+			channelId,
+			content,
+			files: [...pendingFiles],
+			status: 'sending',
+			error: ''
+		};
+		messageOutbox.items = [...outgoing, item];
 		newMessage = '';
-		const filesToSend = [...pendingFiles];
 		pendingFiles = [];
+		requestAnimationFrame(scrollToBottom);
+		await transmit(item.id);
+	}
+
+	async function transmit(id: string) {
+		if (sending) return;
+		const item = outgoing.find((entry) => entry.id === id);
+		if (!item) return;
+		sending = true;
+		item.status = 'sending';
+		item.error = '';
+		const { content, files: filesToSend, channelId: targetChannel } = item;
 
 		try {
 			let res: Response;
 			if (filesToSend.length > 0) {
 				const formData = new FormData();
-				formData.append('channelId', channelId);
+				formData.append('channelId', targetChannel);
 				formData.append('content', content);
 				for (const f of filesToSend) {
 					formData.append('files', f);
 				}
-				res = await fetch('/api/messages', { method: 'POST', body: formData });
+				res = await fetch('/api/messages', {
+					method: 'POST',
+					headers: { 'X-Message-Id': item.id },
+					body: formData
+				});
 			} else {
 				res = await fetch('/api/messages', {
 					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ channelId, content })
+					headers: { 'Content-Type': 'application/json', 'X-Message-Id': item.id },
+					body: JSON.stringify({ channelId: targetChannel, content })
 				});
 			}
 			if (!res.ok) {
 				throw new Error(await responseError(res, 'Your message could not be sent.'));
 			}
+			const confirmed: ChatMessage = await res.json();
+			if (channelId === targetChannel && !messages.some((msg) => msg.id === confirmed.id)) {
+				sseMessages = [...sseMessages, confirmed];
+				requestAnimationFrame(scrollToBottom);
+			}
+			messageOutbox.items = outgoing.filter((entry) => entry.id !== id);
 		} catch (err) {
-			// Give the draft back so nothing typed or attached is lost.
-			newMessage = draft;
-			pendingFiles = filesToSend;
-			notificationState.toast(
-				'error',
-				err instanceof Error && err.message ? err.message : 'Your message could not be sent.'
-			);
+			item.status = 'failed';
+			item.error = err instanceof Error ? err.message : 'Your message could not be sent.';
 		} finally {
 			sending = false;
 		}
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' && !e.shiftKey) {
+		if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
 			e.preventDefault();
 			sendMessage();
 		}
@@ -558,6 +617,13 @@
 			{/if}
 		{/each}
 	{/snippet}
+	{#if connection !== 'connected'}
+		<p class="connection-status" role="status">
+			{connection === 'connecting'
+				? 'Connecting to live messages…'
+				: 'Connection interrupted. Reconnecting…'}
+		</p>
+	{/if}
 	<div
 		bind:this={messagesContainer}
 		class="messages-area"
@@ -565,9 +631,17 @@
 		aria-live="polite"
 		onscroll={handleMessagesScroll}
 	>
-		{#if messages.length === 0}
+		{#if loading}
+			<InlineLoading description="Loading messages…" />
+		{:else if loadError}
+			<InlineNotification kind="error" title={loadError} hideCloseButton lowContrast />
+			<Button kind="ghost" size="small" on:click={() => loadAttempt++}
+				>Retry loading messages</Button
+			>
+		{:else if messages.length === 0 && !outgoing.some((entry) => entry.channelId === channelId)}
 			<p class="empty-state">No messages yet. Start the conversation!</p>
-		{:else}
+		{/if}
+		{#if messages.length > 0}
 			{#each timeline as { msg, daySeparator } (msg.id)}
 				{#if daySeparator}
 					<div class="day-separator"><span>{daySeparator}</span></div>
@@ -715,6 +789,29 @@
 				</div>
 			{/each}
 		{/if}
+		{#each outgoing.filter((entry) => entry.channelId === channelId) as entry (entry.id)}
+			<div class="outgoing-message equipe-motion-fade" class:failed={entry.status === 'failed'}>
+				<p class="message-text">{entry.content}</p>
+				{#each entry.files as attachment, index (index)}
+					<p>{attachment.name} · {formatSize(attachment.size)}</p>
+				{/each}
+				{#if entry.status === 'sending'}
+					<InlineLoading description={entry.files.length ? 'Uploading and sending…' : 'Sending…'} />
+				{:else}
+					<p role="alert">Send failed: {entry.error}</p>
+					<Button kind="ghost" size="small" disabled={sending} on:click={() => transmit(entry.id)}
+						>Retry send</Button
+					>
+					<Button
+						kind="ghost"
+						size="small"
+						on:click={() => {
+							messageOutbox.items = outgoing.filter((item) => item.id !== entry.id);
+						}}>Discard</Button
+					>
+				{/if}
+			</div>
+		{/each}
 	</div>
 
 	<div class="input-area">
@@ -821,6 +918,24 @@
 </ConfirmModal>
 
 <style>
+	.connection-status {
+		padding: var(--cds-spacing-03) var(--cds-spacing-05);
+		color: var(--cds-text-secondary);
+		background: var(--cds-layer-01);
+		font-size: 0.875rem;
+	}
+	.outgoing-message {
+		margin: var(--cds-spacing-04) 0 var(--cds-spacing-04) auto;
+		padding: var(--cds-spacing-04);
+		max-width: 85%;
+		border: 1px dashed var(--cds-border-strong);
+		border-radius: 4px;
+		overflow-wrap: anywhere;
+		background: var(--cds-layer-01);
+	}
+	.outgoing-message.failed {
+		border-color: var(--cds-support-error);
+	}
 	.confirm-note {
 		margin-top: var(--cds-spacing-04);
 		color: var(--cds-text-secondary);

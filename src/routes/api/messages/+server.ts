@@ -87,6 +87,12 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) throw error(401, 'Not authenticated');
+	// A stable client ID makes retries safe when the server saved a message but
+	// the acknowledgement was lost. The primary key arbitrates concurrent retries.
+	const requestId = request.headers.get('X-Message-Id') ?? crypto.randomUUID();
+	if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) {
+		throw error(400, 'Invalid message request ID');
+	}
 
 	const contentType = request.headers.get('Content-Type') || '';
 	let channelId: string;
@@ -142,12 +148,38 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const [inserted] = await db
 		.insert(message)
 		.values({
+			id: requestId,
 			channelId,
 			userId: locals.user.id,
 			userName: locals.user.name,
 			content: content?.trim() || ''
 		})
+		.onConflictDoNothing({ target: message.id })
 		.returning();
+
+	if (!inserted) {
+		const [existing] = await db.select().from(message).where(eq(message.id, requestId));
+		if (
+			!existing ||
+			existing.userId !== locals.user.id ||
+			existing.channelId !== channelId ||
+			existing.content !== (content?.trim() || '')
+		) {
+			throw error(409, 'This request could not be retried.');
+		}
+		const storedFiles = await db
+			.select({ id: file.id, name: file.name, size: file.size, mimeType: file.mimeType })
+			.from(file)
+			.where(eq(file.messageId, existing.id));
+		if (storedFiles.length !== uploadedFiles.length) {
+			throw error(409, 'The previous upload is still processing. Please retry in a moment.');
+		}
+		return json({
+			...existing,
+			createdAt: existing.createdAt.toISOString(),
+			files: storedFiles.length ? storedFiles : undefined
+		});
+	}
 
 	const chatFiles: ChatFile[] = [];
 	try {

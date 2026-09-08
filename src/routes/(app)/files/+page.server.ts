@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { file, teamMember } from '$lib/server/db/schema';
-import { eq, desc, and, inArray } from 'drizzle-orm';
+import { eq, desc, asc, and, inArray, ilike, count, not, or } from 'drizzle-orm';
 import { countActiveSharesByFile } from '$lib/server/fileShare';
 import { FileError, storeUploadedFile, deleteFileWithCleanup } from '$lib/server/files';
 
@@ -18,20 +18,58 @@ export const load: PageServerLoad = async (event) => {
 		.where(eq(teamMember.userId, userId));
 
 	const teamIds = memberships.map((m) => m.teamId);
+	const params = event.url.searchParams;
+	const q = (params.get('q') ?? '').trim().slice(0, 200);
+	const selectedTeam = params.get('team') ?? '';
+	const type = ['image', 'video', 'audio', 'pdf', 'other'].includes(params.get('type') ?? '')
+		? params.get('type')!
+		: '';
+	const sort = params.get('sort') === 'oldest' ? 'oldest' : 'newest';
+	const pageSize = 25;
+	const requestedPage = Number(params.get('page') ?? '1');
+	const fileType = or(
+		ilike(file.mimeType, 'image/%'),
+		ilike(file.mimeType, 'video/%'),
+		ilike(file.mimeType, 'audio/%'),
+		eq(file.mimeType, 'application/pdf')
+	)!;
+	const conditions = and(
+		inArray(file.teamId, teamIds),
+		selectedTeam ? eq(file.teamId, selectedTeam) : undefined,
+		q ? ilike(file.name, `%${q.replace(/[\\%_]/g, '\\$&')}%`) : undefined,
+		type === 'pdf'
+			? eq(file.mimeType, 'application/pdf')
+			: type === 'other'
+				? not(fileType)
+				: type
+					? ilike(file.mimeType, `${type}/%`)
+					: undefined
+	);
+	const [{ total }] = await db.select({ total: count() }).from(file).where(conditions);
+	const pageCount = Math.max(1, Math.ceil(total / pageSize));
+	const currentPage = Math.min(
+		pageCount,
+		Math.max(1, Number.isSafeInteger(requestedPage) ? requestedPage : 1)
+	);
 
 	const files =
 		teamIds.length > 0
 			? await db
 					.select()
 					.from(file)
-					.where(inArray(file.teamId, teamIds))
-					.orderBy(desc(file.createdAt))
-					.limit(100)
+					.where(conditions)
+					.orderBy(sort === 'oldest' ? asc(file.createdAt) : desc(file.createdAt), asc(file.id))
+					.limit(pageSize)
+					.offset((currentPage - 1) * pageSize)
 			: [];
 
 	const shareCounts = await countActiveSharesByFile(files.map((f) => f.id));
 
 	return {
+		filters: { q, team: selectedTeam, type, sort },
+		total,
+		currentPage,
+		pageCount,
 		files: files.map((f) => ({
 			...f,
 			createdAt: f.createdAt.toISOString(),

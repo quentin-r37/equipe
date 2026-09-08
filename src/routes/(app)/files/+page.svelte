@@ -1,6 +1,7 @@
 <script lang="ts">
 	import LabeledButton from '$lib/components/LabeledButton.svelte';
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import {
 		Button,
 		Tile,
@@ -8,7 +9,8 @@
 		Select,
 		SelectItem,
 		Tag,
-		InlineNotification
+		InlineNotification,
+		TextInput
 	} from 'carbon-components-svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
 	import Download from 'carbon-icons-svelte/lib/Download.svelte';
@@ -35,6 +37,10 @@
 	import type { Component } from 'svelte';
 
 	let { data }: { data: PageServerData & LayoutServerData } = $props();
+	const hasFilters = $derived(!!(data.filters.q || data.filters.team || data.filters.type));
+	function pageHref(number: number) {
+		return `${resolve('/files')}?${new URLSearchParams({ ...data.filters, page: String(number) })}`;
+	}
 
 	// ── Upload modal ──
 	let showUploadModal = $state(false);
@@ -121,11 +127,43 @@
 	{/if}
 </div>
 
+<form
+	class="file-filters"
+	method="get"
+	action={resolve('/files')}
+	role="search"
+	aria-label="Find files"
+>
+	<TextInput name="q" labelText="File name" placeholder="Search files…" value={data.filters.q} />
+	<Select name="team" labelText="Team" selected={data.filters.team}>
+		<SelectItem value="" text="All teams" />
+		{#each data.teams as team (team.id)}<SelectItem value={team.id} text={team.name} />{/each}
+	</Select>
+	<Select name="type" labelText="File type" selected={data.filters.type}>
+		<SelectItem value="" text="All types" />
+		<SelectItem value="image" text="Images" /><SelectItem value="video" text="Videos" />
+		<SelectItem value="audio" text="Audio" /><SelectItem value="pdf" text="PDF" />
+		<SelectItem value="other" text="Other documents" />
+	</Select>
+	<Select name="sort" labelText="Sort by" selected={data.filters.sort}>
+		<SelectItem value="newest" text="Newest first" /><SelectItem
+			value="oldest"
+			text="Oldest first"
+		/>
+	</Select>
+	<Button type="submit">Search</Button>
+	<Button kind="ghost" href={resolve('/files')}>Reset</Button>
+</form>
+<p class="result-count" role="status">{data.total} file{data.total !== 1 ? 's' : ''} found</p>
+
 {#if data.files.length === 0}
 	<Tile>
 		<div class="empty-state">
 			<DocumentMultiple01 size={32} />
-			{#if data.teams.length === 0}
+			{#if hasFilters}
+				<p>No files match your search. Try another name or clear the filters.</p>
+				<Button kind="ghost" href={resolve('/files')}>Clear filters</Button>
+			{:else if data.teams.length === 0}
 				<p>Join or create a team to start sharing files.</p>
 			{:else}
 				<p>No files uploaded yet.</p>
@@ -196,6 +234,20 @@
 {/if}
 
 <!-- Upload modal: stays open until the upload succeeds -->
+{#if data.pageCount > 1}
+	<nav class="file-pagination" aria-label="File result pages">
+		{#if data.currentPage > 1}
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- pageHref resolves the route before adding query parameters -->
+			<a href={pageHref(data.currentPage - 1)}>Previous</a>
+		{/if}
+		<span>Page {data.currentPage} of {data.pageCount}</span>
+		{#if data.currentPage < data.pageCount}
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- pageHref resolves the route before adding query parameters -->
+			<a href={pageHref(data.currentPage + 1)}>Next</a>
+		{/if}
+	</nav>
+{/if}
+
 <Modal
 	bind:open={showUploadModal}
 	modalHeading="Upload File"
@@ -271,6 +323,38 @@
 <ShareFileModal bind:open={showShareModal} fileId={shareFileId} />
 
 <style>
+	.file-filters {
+		display: grid;
+		grid-template-columns: minmax(12rem, 2fr) repeat(3, minmax(8rem, 1fr)) auto auto;
+		gap: var(--cds-spacing-04);
+		align-items: end;
+		margin-bottom: var(--cds-spacing-05);
+	}
+	.result-count {
+		margin-bottom: var(--cds-spacing-04);
+		color: var(--cds-text-secondary);
+	}
+	.file-pagination {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--cds-spacing-05);
+		margin-block: var(--cds-spacing-06);
+	}
+	.file-pagination a {
+		color: var(--cds-link-primary);
+		padding: var(--cds-spacing-03);
+	}
+	@media (max-width: 1056px) {
+		.file-filters {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+	@media (max-width: 420px) {
+		.file-filters {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
 	.page-header {
 		display: flex;
 		align-items: center;

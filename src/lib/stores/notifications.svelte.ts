@@ -1,5 +1,7 @@
 import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
+import { resolve } from '$app/paths';
+import type { Pathname } from '$app/types';
 import type { NotificationType } from '$lib/server/notifications';
 import * as m from '$lib/paraglide/messages';
 
@@ -37,6 +39,8 @@ export interface LocalToast {
 
 class NotificationState {
 	notifications: AppNotification[] = $state([]);
+	history: (AppNotification & { read: boolean })[] = $state([]);
+	unreadCount = $derived(this.history.filter((n) => !n.read).length);
 	toasts: LocalToast[] = $state([]);
 	permissionState: NotificationPermission = $state(
 		browser && 'Notification' in window ? Notification.permission : 'default'
@@ -45,8 +49,10 @@ class NotificationState {
 	private timers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
 	add(notification: AppNotification) {
+		if (this.history.some((n) => n.id === notification.id)) return;
 		if (browser && window.location.pathname === notification.href) return;
 
+		this.history = [{ ...notification, read: false }, ...this.history].slice(0, 100);
 		this.notifications = [...this.notifications, notification];
 
 		const timer = setTimeout(() => {
@@ -85,7 +91,13 @@ class NotificationState {
 		}
 	}
 
+	markRead(id: string) {
+		this.history = this.history.map((n) => (n.id === id ? { ...n, read: true } : n));
+		this.dismiss(id);
+	}
+
 	clearAll() {
+		this.history = this.history.map((n) => ({ ...n, read: true }));
 		for (const n of this.notifications) {
 			const timer = this.timers.get(n.id);
 			if (timer) {
@@ -126,10 +138,7 @@ class NotificationState {
 			this.add(notification);
 		});
 
-		this.eventSource.onerror = () => {
-			this.disconnect();
-			setTimeout(() => this.connect(), 5000);
-		};
+		// EventSource reconnects automatically; closing it here would lose that behavior.
 	}
 
 	disconnect() {
@@ -164,7 +173,8 @@ class NotificationState {
 
 		n.onclick = () => {
 			window.focus();
-			goto(notification.href);
+			this.markRead(notification.id);
+			goto(resolve(notification.href as Pathname));
 			n.close();
 		};
 

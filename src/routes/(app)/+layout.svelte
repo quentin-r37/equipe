@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import type { Snippet } from 'svelte';
 	import { browser } from '$app/environment';
 	import {
 		Header,
@@ -27,17 +28,20 @@
 	import Logo from '$lib/components/Logo.svelte';
 	import ThemeSelector from '$lib/components/ThemeSelector.svelte';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
+	import NotificationPanel from '$lib/components/NotificationPanel.svelte';
 	import MeetingWidget from '$lib/components/MeetingWidget.svelte';
 	import { notificationState } from '$lib/stores/notifications.svelte';
 	import { meetingState } from '$lib/stores/meeting.svelte';
+	import { messageOutbox } from '$lib/stores/messageOutbox.svelte';
 	import type { LayoutServerData } from './$types';
 
-	let { data, children }: { data: LayoutServerData; children: any } = $props();
+	let { data, children }: { data: LayoutServerData; children: Snippet } = $props();
 
 	let isSideNavOpen = $state(false);
+	let notificationsOpen = $state(false);
 
 	const pathname = $derived(page.url.pathname);
-	const hasUnread = $derived(notificationState.notifications.length > 0);
+	const hasUnread = $derived(notificationState.unreadCount > 0);
 	const isOnMeetingPage = $derived(
 		meetingState.meetingId !== null && pathname === `/meetings/${meetingState.meetingId}`
 	);
@@ -54,17 +58,14 @@
 	$effect(() => {
 		if (browser) {
 			notificationState.connect();
-			return () => notificationState.disconnect();
+			return () => {
+				notificationState.disconnect();
+				notificationState.clearAll();
+				notificationState.history = [];
+				messageOutbox.items = [];
+			};
 		}
 	});
-
-	function handleNotificationBell() {
-		if (notificationState.permissionState === 'default') {
-			notificationState.requestPermission();
-		} else if (hasUnread) {
-			notificationState.clearAll();
-		}
-	}
 </script>
 
 <Header bind:isSideNavOpen href="/">
@@ -73,12 +74,13 @@
 		Equipe
 	</svelte:fragment>
 	<HeaderUtilities>
-		<HeaderGlobalAction
-			aria-label="Notifications"
-			iconDescription="Notifications"
+		<HeaderAction
+			bind:isOpen={notificationsOpen}
+			iconDescription={`Notifications (${notificationState.unreadCount} unread)`}
 			icon={hasUnread ? NotificationNew : NotificationIcon}
-			onclick={handleNotificationBell}
-		/>
+		>
+			<NotificationPanel onnavigate={() => (notificationsOpen = false)} />
+		</HeaderAction>
 		<HeaderAction icon={ColorPalette} iconDescription="Theme">
 			<ThemeSelector />
 		</HeaderAction>
