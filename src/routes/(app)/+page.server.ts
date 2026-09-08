@@ -3,8 +3,22 @@ import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import { team, teamMember, channel, meeting, file, message, user } from '$lib/server/db/schema';
-import { eq, and, inArray, desc, count } from 'drizzle-orm';
+import { eq, and, inArray, desc, count, gte, sql, type SQL } from 'drizzle-orm';
+import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 import { deleteFile } from '$lib/server/seaweedfs';
+
+/** Width of the KPI sparkline window, in days. */
+const TREND_DAYS = 14;
+
+/** Local-time `YYYY-MM-DD`, matching what `date_trunc` returns for a `timestamp` column. */
+function dayKey(d: Date): string {
+	const m = String(d.getMonth() + 1).padStart(2, '0');
+	const day = String(d.getDate()).padStart(2, '0');
+	return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/** Per-day `to_char` bucket key for a timestamp column, used in both SELECT and GROUP BY. */
+const dayOf = (col: AnyPgColumn) => sql<string>`to_char(date_trunc('day', ${col}), 'YYYY-MM-DD')`;
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) throw redirect(302, '/login');
@@ -43,6 +57,57 @@ export const load: PageServerLoad = async (event) => {
 		fileCount = result?.count ?? 0;
 	}
 
+	/*
+	 * The series behind each KPI sparkline: how many of that thing were created per day
+	 * over the trend window, oldest first. Buckets are dense (missing days are 0) so the
+	 * four plots share one time axis and can be read against each other.
+	 */
+	const since = new Date();
+	since.setHours(0, 0, 0, 0);
+	since.setDate(since.getDate() - (TREND_DAYS - 1));
+
+	// Bucket key per slot, so a row's day maps straight to its index.
+	const slotOf = new Map<string, number>();
+	for (let i = 0; i < TREND_DAYS; i++) {
+		const d = new Date(since);
+		d.setDate(since.getDate() + i);
+		slotOf.set(dayKey(d), i);
+	}
+
+	const bucketize = (rows: { day: string; total: number }[]): number[] => {
+		const series = new Array<number>(TREND_DAYS).fill(0);
+		for (const row of rows) {
+			const slot = slotOf.get(row.day);
+			if (slot !== undefined) series[slot] = row.total;
+		}
+		return series;
+	};
+
+	/** Daily creation counts for one table, scoped to the user's teams. */
+	const createdPerDay = async (table: PgTable, col: AnyPgColumn, scope: SQL | undefined) => {
+		const day = dayOf(col);
+		const rows = await db
+			.select({ day, total: count() })
+			.from(table)
+			.where(and(scope, gte(col, since)))
+			.groupBy(day);
+		return bucketize(rows);
+	};
+
+	const emptySeries = new Array<number>(TREND_DAYS).fill(0);
+	const trends =
+		teamIds.length === 0
+			? { teams: emptySeries, channels: emptySeries, meetings: emptySeries, files: emptySeries }
+			: await (async () => {
+					const [teams, channels, meetings, files] = await Promise.all([
+						createdPerDay(team, team.createdAt, inArray(team.id, teamIds)),
+						createdPerDay(channel, channel.createdAt, inArray(channel.teamId, teamIds)),
+						createdPerDay(meeting, meeting.createdAt, inArray(meeting.teamId, teamIds)),
+						createdPerDay(file, file.createdAt, inArray(file.teamId, teamIds))
+					]);
+					return { teams, channels, meetings, files };
+				})();
+
 	// Recent messages across user's channels
 	let recentMessages: {
 		id: string;
@@ -73,7 +138,14 @@ export const load: PageServerLoad = async (event) => {
 		}
 	}
 
-	return { activeMeetings, memberCounts, fileCount, recentMessages };
+	return {
+		activeMeetings,
+		memberCounts,
+		fileCount,
+		recentMessages,
+		trends,
+		trendDays: TREND_DAYS
+	};
 };
 
 export const actions: Actions = {

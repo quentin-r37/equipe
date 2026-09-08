@@ -6,8 +6,6 @@
 		OverflowMenu,
 		OverflowMenuItem,
 		TextInput,
-		Tile,
-		ClickableTile,
 		Modal,
 		Select,
 		SelectItem,
@@ -18,6 +16,7 @@
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
 	import ArrowRight from 'carbon-icons-svelte/lib/ArrowRight.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import Sparkline from '$lib/components/Sparkline.svelte';
 	import { feedbackEnhance } from '$lib/forms';
 	import type { PageData } from './$types';
 
@@ -72,6 +71,28 @@
 		}))
 	);
 
+	/*
+	 * The four KPI tiles. The headline is the current total; the sparkline under it is how
+	 * many were added per day over the window, so `verb` names what the series counts and
+	 * keeps the plot from being read as the total over time.
+	 */
+	const kpis = $derived([
+		{ label: 'Teams', value: data.teams.length, verb: 'created', series: data.trends.teams },
+		{
+			label: 'Channels',
+			value: data.channels.length,
+			verb: 'created',
+			series: data.trends.channels
+		},
+		{
+			label: 'Active meetings',
+			value: data.activeMeetings.length,
+			verb: 'started',
+			series: data.trends.meetings
+		},
+		{ label: 'Files', value: data.fileCount, verb: 'uploaded', series: data.trends.files }
+	]);
+
 	// Format relative time
 	function timeAgo(date: Date | string): string {
 		const now = Date.now();
@@ -106,22 +127,25 @@
 	</header>
 	{#if data.teams.length > 0}
 		<dl class="workspace-summary">
-			<div>
-				<dt>Teams</dt>
-				<dd>{data.teams.length}</dd>
-			</div>
-			<div>
-				<dt>Channels</dt>
-				<dd>{data.channels.length}</dd>
-			</div>
-			<div>
-				<dt>Active meetings</dt>
-				<dd>{data.activeMeetings.length}</dd>
-			</div>
-			<div>
-				<dt>Files</dt>
-				<dd>{data.fileCount}</dd>
-			</div>
+			{#each kpis as kpi (kpi.label)}
+				{@const added = kpi.series.reduce((a, b) => a + b, 0)}
+				<div class="kpi">
+					<dt>{kpi.label}</dt>
+					<dd>
+						<span class="kpi-value">{kpi.value}</span>
+						<span class="kpi-note">{added} {kpi.verb} · {data.trendDays}d</span>
+						<!-- A flat line on the baseline would read as a rule rather than as data,
+						     so a window with nothing in it simply gets no plot. -->
+						{#if added > 0}
+							<Sparkline
+								values={kpi.series}
+								height={32}
+								label="{kpi.label}: {added} {kpi.verb} over the last {data.trendDays} days"
+							/>
+						{/if}
+					</dd>
+				</div>
+			{/each}
 		</dl>
 	{/if}
 
@@ -159,21 +183,19 @@
 			</div>
 
 			{#if channelsByTeam.length === 0}
-				<Tile>
-					<div class="empty-state">
-						<Group size={32} />
-						<h3>No teams yet</h3>
-						<p>Create your first team to start collaborating with your colleagues.</p>
-						<LabeledButton
-							icon={Add}
-							tooltip="Create team"
-							onclick={() => {
-								teamError = '';
-								showTeamModal = true;
-							}}>Create Team</LabeledButton
-						>
-					</div>
-				</Tile>
+				<div class="empty-state panel">
+					<Group size={32} />
+					<h3>No teams yet</h3>
+					<p>Create your first team to start collaborating with your colleagues.</p>
+					<LabeledButton
+						icon={Add}
+						tooltip="Create team"
+						onclick={() => {
+							teamError = '';
+							showTeamModal = true;
+						}}>Create Team</LabeledButton
+					>
+				</div>
 			{:else}
 				<div class="teams-grid">
 					{#each channelsByTeam as t (t.id)}
@@ -253,17 +275,21 @@
 		<!-- Right sidebar: Meetings + Recent Activity -->
 		<section class="activity-section">
 			<!-- Active Meetings -->
-			<div class="section-header">
-				<h2 class="section-title">Active Meetings</h2>
-				{#if data.teams.length > 0}
-					<LabeledButton size="small" kind="ghost" icon={Add} tooltip="New meeting" href="/meetings"
-						>New</LabeledButton
-					>
-				{/if}
-			</div>
+			<div class="panel">
+				<div class="section-header">
+					<h2 class="section-title">Active Meetings</h2>
+					{#if data.teams.length > 0}
+						<LabeledButton
+							size="small"
+							kind="ghost"
+							icon={Add}
+							tooltip="New meeting"
+							href="/meetings">New</LabeledButton
+						>
+					{/if}
+				</div>
 
-			{#if data.activeMeetings.length === 0}
-				<div class="meetings-empty">
+				{#if data.activeMeetings.length === 0}
 					<div class="empty-state-small">
 						<VideoChat size={32} />
 						<p>No active meetings right now.</p>
@@ -277,32 +303,30 @@
 							Go to Meetings
 						</LabeledButton>
 					</div>
-				</div>
-			{:else}
-				<div class="meeting-list">
-					{#each data.activeMeetings as m (m.id)}
-						<ClickableTile href="/meetings/{m.id}">
-							<div class="meeting-item">
-								<div class="meeting-dot"></div>
-								<div>
+				{:else}
+					<div class="meeting-list">
+						{#each data.activeMeetings as m (m.id)}
+							<a class="meeting-item" href={resolve(`/meetings/${m.id}`)}>
+								<span class="meeting-dot"></span>
+								<span>
 									<span class="meeting-title">{m.title}</span>
 									<span class="meeting-time">Started {timeAgo(m.createdAt)}</span>
-								</div>
-							</div>
-						</ClickableTile>
-					{/each}
-				</div>
-			{/if}
+								</span>
+							</a>
+						{/each}
+					</div>
+				{/if}
+			</div>
 
 			<!-- Recent Activity -->
 			{#if data.recentMessages.length > 0}
-				<div class="section-header" style="margin-top: var(--cds-spacing-07);">
-					<h2 class="section-title">Recent Activity</h2>
-				</div>
-				<div class="activity-panel">
+				<div class="panel">
+					<div class="section-header">
+						<h2 class="section-title">Recent Activity</h2>
+					</div>
 					<ul class="activity-list">
 						{#each data.recentMessages as msg (msg.id)}
-							<li class="activity-item">
+							<li>
 								<a href={resolve(`/channels/${msg.channelId}`)} class="activity-link">
 									<div class="activity-header">
 										<span class="activity-user">{msg.userName}</span>
@@ -468,43 +492,86 @@
 		font-weight: 400;
 		overflow-wrap: anywhere;
 	}
+	.dashboard-header {
+		margin-bottom: var(--cds-spacing-06);
+	}
 	.dashboard-header p {
 		margin-top: 0.5rem;
 		color: var(--cds-text-secondary);
 		font-size: 0.875rem;
 	}
+	/*
+	 * Separation on this page comes from layering, not from rules: every block is a
+	 * `--cds-ui-01` surface sitting on the `--cds-ui-background` page, and the gutter
+	 * between surfaces does the dividing. The only 1px lines left are the vertical
+	 * filets inside the KPI row, where they group figures that share one surface.
+	 */
+	.panel {
+		background: var(--cds-ui-01);
+		padding: var(--cds-spacing-05) var(--cds-spacing-06) var(--cds-spacing-06);
+	}
 	.workspace-summary {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 1rem 2rem;
-		padding: 1.25rem 0;
-		margin: 0 0 1.5rem;
-		border-bottom: 1px solid var(--cds-border-subtle);
+		background: var(--cds-ui-01);
+		/* No side or bottom padding: each cell's sparkline runs to its own edges. The inset
+		   is carried by the text inside the cells instead. */
+		padding: var(--cds-spacing-05) 0 0;
+		margin: 0 0 var(--cds-spacing-05);
 	}
-	.workspace-summary div {
+	.kpi {
 		display: flex;
-		align-items: baseline;
-		gap: 0.5rem;
+		flex-direction: column;
+		flex: 1 1 8rem;
+		border-left: 1px solid var(--cds-border-subtle);
 	}
-	.workspace-summary dt {
+	.kpi:first-child {
+		border-left: none;
+	}
+	.kpi dd {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+	}
+	.kpi dt,
+	.kpi-value,
+	.kpi-note {
+		padding: 0 var(--cds-spacing-06);
+	}
+	.kpi dt {
 		color: var(--cds-text-secondary);
-		font-size: 0.8125rem;
+		font-size: 0.75rem;
 	}
-	.workspace-summary dd {
-		order: -1;
-		font-size: 1rem;
-		font-weight: 600;
+	.kpi-value {
+		font-size: 1.75rem;
+		font-weight: 300;
+		line-height: 1.2;
 		font-variant-numeric: tabular-nums;
+	}
+	.kpi-note {
+		color: var(--cds-text-secondary);
+		font-size: 0.6875rem;
+	}
+	/* Anchor the plot to the bottom so the four line up despite unequal text height. */
+	.kpi :global(.sparkline) {
+		margin-top: auto;
+		padding-top: var(--cds-spacing-04);
 	}
 	.dashboard-columns {
 		display: grid;
 		grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-		gap: 2.5rem;
-		margin-top: 1.5rem;
+		gap: var(--cds-spacing-05);
+		align-items: start;
+		margin-top: var(--cds-spacing-05);
 	}
 	.teams-section,
 	.activity-section {
 		min-width: 0;
+	}
+	.activity-section {
+		display: flex;
+		flex-direction: column;
+		gap: var(--cds-spacing-05);
 	}
 	.section-header {
 		display: flex;
@@ -523,12 +590,19 @@
 		display: flex;
 		gap: 0.25rem;
 	}
+	/*
+	 * Each team is its own surface rather than a row inside one panel. A header inside a
+	 * tile labels that tile; this grid's header sits above it, on the page, because it
+	 * labels the group.
+	 */
 	.teams-grid {
-		border-top: 1px solid var(--cds-border-subtle);
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+		gap: var(--cds-spacing-05);
 	}
 	.team-card {
-		padding: 1rem 0;
-		border-bottom: 1px solid var(--cds-border-subtle);
+		background: var(--cds-ui-01);
+		padding: var(--cds-spacing-05);
 	}
 	.team-header {
 		display: flex;
@@ -543,7 +617,9 @@
 		flex-shrink: 0;
 		font-size: 0.75rem;
 		font-weight: 600;
-		background: var(--cds-ui-01);
+		/* One step up from the panel it sits on, so it stays visible now that
+		   the panel itself is `--cds-ui-01`. */
+		background: var(--cds-ui-03);
 		color: var(--cds-text-secondary);
 	}
 	.team-info {
@@ -571,13 +647,13 @@
 		margin-top: 0.25rem;
 	}
 	.team-description {
-		margin: 0.5rem 0 0 2.75rem;
+		margin: 0.5rem 0 0;
 		color: var(--cds-text-secondary);
 		font-size: 0.8125rem;
 		overflow-wrap: anywhere;
 	}
 	.channel-list {
-		margin: 0.375rem 0 0 2.25rem;
+		margin: 0.5rem 0 0;
 	}
 	.channel-item {
 		display: flex;
@@ -617,7 +693,7 @@
 		color: var(--cds-text-secondary);
 	}
 	.empty-state {
-		padding: 2rem 1rem;
+		padding: 2rem 0;
 	}
 	.empty-state h3 {
 		color: var(--cds-text-primary);
@@ -626,18 +702,21 @@
 	.empty-state-small p {
 		font-size: 0.875rem;
 	}
-	.meetings-empty {
-		border-top: 1px solid var(--cds-border-subtle);
-	}
 	.meeting-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
 	}
 	.meeting-item {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
+		padding: 0.625rem 0.5rem;
+		margin: 0 -0.5rem;
+		color: inherit;
+		text-decoration: none;
+	}
+	.meeting-item:hover {
+		background: var(--cds-hover-ui);
 	}
 	.meeting-dot {
 		width: 0.5rem;
@@ -660,14 +739,11 @@
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		border-top: 1px solid var(--cds-border-subtle);
-	}
-	.activity-item {
-		border-bottom: 1px solid var(--cds-border-subtle);
 	}
 	.activity-link {
 		display: block;
-		padding: 0.875rem 0;
+		padding: 0.625rem 0.5rem;
+		margin: 0 -0.5rem;
 		color: inherit;
 		text-decoration: none;
 	}
@@ -714,8 +790,23 @@
 		}
 	}
 	@media (max-width: 672px) {
+		/*
+		 * Once the cells wrap, a left-border filet would reappear at the start of the second
+		 * row (CSS can't see row starts in a flex container). Below this breakpoint the band
+		 * drops the filets and separates by gutter instead — the same layering rule the rest
+		 * of the page follows.
+		 */
 		.workspace-summary {
-			gap: 0.75rem 1.25rem;
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 1px;
+			background: var(--cds-ui-background);
+			padding: 0;
+		}
+		.kpi {
+			background: var(--cds-ui-01);
+			border-left: none;
+			padding-top: var(--cds-spacing-05);
 		}
 	}
 </style>

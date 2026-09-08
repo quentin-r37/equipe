@@ -868,17 +868,17 @@
 					labelText="Message"
 					rows={1}
 				/>
-				<p class="input-hint">Enter to send · Shift + Enter for a new line</p>
 			</div>
 			<Button
 				icon={SendAlt}
 				iconDescription="Send"
 				kind="primary"
-				size={compact ? 'small' : undefined}
+				size={compact ? 'small' : 'field'}
 				on:click={sendMessage}
 				disabled={(!newMessage.trim() && pendingFiles.length === 0) || sending}
 			/>
 		</div>
+		<p class="input-hint">Enter to send · Shift + Enter for a new line</p>
 	</div>
 </div>
 
@@ -1444,7 +1444,7 @@
 		/* Keep the buttons pinned to the bottom as the composer grows. */
 		align-items: flex-end;
 		gap: var(--cds-spacing-03);
-		padding: var(--cds-spacing-05) var(--cds-spacing-06);
+		padding: var(--cds-spacing-05) var(--cds-spacing-06) 0;
 	}
 
 	.compact .input-row {
@@ -1479,8 +1479,12 @@
 		resize: vertical;
 	}
 
+	/* Sits below the row so its reserved space never offsets the buttons from the field. */
 	.input-hint {
-		margin-top: var(--cds-spacing-02);
+		margin: 0;
+		padding: var(--cds-spacing-02) var(--cds-spacing-06) var(--cds-spacing-05);
+		/* Line the helper text up with the field, past the attach button and its gap. */
+		padding-left: calc(2.5rem + var(--cds-spacing-03) + var(--cds-spacing-06));
 		font-size: 0.6875rem;
 		color: var(--cds-text-helper);
 		/* Only surfaced while composing, so it never competes with the conversation. */
@@ -1488,7 +1492,7 @@
 		transition: opacity var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
 	}
 
-	.input-field:focus-within .input-hint {
+	.input-area:focus-within .input-hint {
 		opacity: 1;
 	}
 

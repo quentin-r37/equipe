@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { browser } from '$app/environment';
 	import {
 		Header,
@@ -37,8 +37,26 @@
 
 	let { data, children }: { data: LayoutServerData; children: Snippet } = $props();
 
-	let isSideNavOpen = $state(false);
+	let isSideNavOpen = $state(true);
 	let notificationsOpen = $state(false);
+
+	/*
+	 * `persistentHamburgerMenu` keeps the toggle visible above Carbon's 1056px breakpoint,
+	 * where the hamburger is otherwise hidden and the nav forced open. The trade-off is that
+	 * Header then treats the nav as fully user-controlled and sets `isSideNavOpen = false`
+	 * on mount, so the preference is restored here once that initial assignment has run.
+	 */
+	const SIDE_NAV_KEY = 'equipe-sidenav-open';
+	let sideNavRestored = $state(false);
+
+	onMount(() => {
+		isSideNavOpen = localStorage.getItem(SIDE_NAV_KEY) !== 'false';
+		sideNavRestored = true;
+	});
+
+	$effect(() => {
+		if (sideNavRestored) localStorage.setItem(SIDE_NAV_KEY, String(isSideNavOpen));
+	});
 
 	const pathname = $derived(page.url.pathname);
 	const hasUnread = $derived(notificationState.unreadCount > 0);
@@ -68,7 +86,7 @@
 	});
 </script>
 
-<Header bind:isSideNavOpen href="/">
+<Header bind:isSideNavOpen persistentHamburgerMenu href="/">
 	<svelte:fragment slot="platform">
 		<span class="header-logo"><Logo size={20} /></span>
 		Equipe
