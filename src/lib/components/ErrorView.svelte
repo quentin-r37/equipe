@@ -1,6 +1,6 @@
 <script lang="ts">
+	import LabeledButton from '$lib/components/LabeledButton.svelte';
 	import { resolve } from '$app/paths';
-	import { Button } from 'carbon-components-svelte';
 	import ArrowLeft from 'carbon-icons-svelte/lib/ArrowLeft.svelte';
 	import Home from 'carbon-icons-svelte/lib/Home.svelte';
 	import Logo from '$lib/components/Logo.svelte';
@@ -57,20 +57,11 @@
 	<h1>{copy.title}</h1>
 	<p class="error-detail">{copy.detail}</p>
 	<div class="error-actions">
-		<Button
-			href={copy.action.href}
-			class="btn--labeled"
-			icon={Home}
-			iconDescription={copy.action.label}
-		>
+		<LabeledButton href={copy.action.href} icon={Home} tooltip={copy.action.label}>
 			{copy.action.label}
-		</Button>
-		<Button
-			kind="ghost"
-			icon={ArrowLeft}
-			class="btn--labeled"
-			iconDescription="Go back"
-			on:click={() => history.back()}>Go back</Button
+		</LabeledButton>
+		<LabeledButton kind="ghost" icon={ArrowLeft} tooltip="Go back" onclick={() => history.back()}
+			>Go back</LabeledButton
 		>
 	</div>
 </div>

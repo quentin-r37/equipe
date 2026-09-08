@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LabeledButton from '$lib/components/LabeledButton.svelte';
 	import { enhance } from '$app/forms';
 	import {
 		Button,
@@ -172,29 +173,27 @@
 				<h2 class="section-title">Teams & Channels</h2>
 				<div class="section-actions">
 					{#if data.teams.length > 0}
-						<Button
+						<LabeledButton
 							size="small"
 							kind="ghost"
 							icon={Add}
-							class="btn--labeled"
-							iconDescription="Add channel"
-							on:click={() => {
+							tooltip="Add channel"
+							onclick={() => {
 								channelError = '';
 								showChannelModal = true;
 							}}
 						>
 							Channel
-						</Button>
+						</LabeledButton>
 					{/if}
-					<Button
+					<LabeledButton
 						size="small"
 						icon={Add}
-						class="btn--labeled"
-						iconDescription="Create team"
-						on:click={() => {
+						tooltip="Create team"
+						onclick={() => {
 							teamError = '';
 							showTeamModal = true;
-						}}>Team</Button
+						}}>Team</LabeledButton
 					>
 				</div>
 			</div>
@@ -205,14 +204,13 @@
 						<Group size={32} />
 						<h3>No teams yet</h3>
 						<p>Create your first team to start collaborating with your colleagues.</p>
-						<Button
+						<LabeledButton
 							icon={Add}
-							class="btn--labeled"
-							iconDescription="Create team"
-							on:click={() => {
+							tooltip="Create team"
+							onclick={() => {
 								teamError = '';
 								showTeamModal = true;
-							}}>Create Team</Button
+							}}>Create Team</LabeledButton
 						>
 					</div>
 				</Tile>
@@ -292,12 +290,8 @@
 			<div class="section-header">
 				<h2 class="section-title">Active Meetings</h2>
 				{#if data.teams.length > 0}
-					<Button
-						size="small"
-						icon={Add}
-						class="btn--labeled"
-						iconDescription="New meeting"
-						href="/meetings">New</Button
+					<LabeledButton size="small" icon={Add} tooltip="New meeting" href="/meetings"
+						>New</LabeledButton
 					>
 				{/if}
 			</div>
@@ -307,16 +301,15 @@
 					<div class="empty-state-small">
 						<VideoChat size={32} />
 						<p>No active meetings right now.</p>
-						<Button
+						<LabeledButton
 							size="small"
 							kind="ghost"
 							icon={ArrowRight}
-							class="btn--labeled"
-							iconDescription="Go to meetings"
+							tooltip="Go to meetings"
 							href="/meetings"
 						>
 							Go to Meetings
-						</Button>
+						</LabeledButton>
 					</div>
 				</Tile>
 			{:else}

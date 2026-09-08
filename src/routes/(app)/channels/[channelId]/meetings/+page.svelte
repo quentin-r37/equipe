@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LabeledButton from '$lib/components/LabeledButton.svelte';
 	import { enhance } from '$app/forms';
 	import {
 		Button,
@@ -42,12 +43,8 @@
 <div class="meetings-container">
 	<div class="page-header">
 		<h3>Team meetings</h3>
-		<Button
-			size="small"
-			icon={Add}
-			class="btn--labeled"
-			iconDescription="New meeting"
-			on:click={openCreate}>New Meeting</Button
+		<LabeledButton size="small" icon={Add} tooltip="New meeting" onclick={openCreate}
+			>New Meeting</LabeledButton
 		>
 	</div>
 
@@ -56,13 +53,12 @@
 			<div class="empty-state">
 				<VideoChat size={32} />
 				<p>No meetings yet. Start one to open a video call for your team.</p>
-				<Button
+				<LabeledButton
 					size="small"
 					kind="ghost"
 					icon={Add}
-					class="btn--labeled"
-					iconDescription="Start a meeting"
-					on:click={openCreate}>Start a meeting</Button
+					tooltip="Start a meeting"
+					onclick={openCreate}>Start a meeting</LabeledButton
 				>
 			</div>
 		</Tile>
@@ -80,12 +76,11 @@
 								{m.status === 'active' ? 'Live' : 'Ended'}
 							</Tag>
 							{#if m.status === 'active'}
-								<Button
+								<LabeledButton
 									size="small"
 									icon={VideoChat}
-									class="btn--labeled"
-									iconDescription="Join meeting"
-									href="/meetings/{m.id}">Join</Button
+									tooltip="Join meeting"
+									href="/meetings/{m.id}">Join</LabeledButton
 								>
 							{/if}
 							{#if m.createdBy === data.user.id}

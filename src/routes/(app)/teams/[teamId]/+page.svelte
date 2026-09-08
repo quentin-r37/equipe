@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LabeledButton from '$lib/components/LabeledButton.svelte';
 	import { enhance } from '$app/forms';
 	import {
 		Button,
@@ -199,24 +200,22 @@
 							rows={3}
 						/>
 						<div class="edit-actions">
-							<Button
+							<LabeledButton
 								size="small"
 								type="submit"
-								class="btn--labeled"
 								icon={Checkmark}
-								iconDescription="Save description"
+								tooltip="Save description"
 								disabled={descriptionPending}
 							>
 								{descriptionPending ? 'Saving…' : 'Save'}
-							</Button>
-							<Button
+							</LabeledButton>
+							<LabeledButton
 								size="small"
 								kind="ghost"
 								icon={Close}
-								class="btn--labeled"
-								iconDescription="Cancel"
+								tooltip="Cancel"
 								disabled={descriptionPending}
-								on:click={() => (editingDescription = false)}>Cancel</Button
+								onclick={() => (editingDescription = false)}>Cancel</LabeledButton
 							>
 						</div>
 					</form>
@@ -239,12 +238,8 @@
 			<div class="section-header">
 				<h2 class="section-title">Members</h2>
 				{#if isOwnerOrAdmin}
-					<Button
-						size="small"
-						icon={UserFollow}
-						class="btn--labeled"
-						iconDescription="Add member"
-						on:click={openAddMember}>Add Member</Button
+					<LabeledButton size="small" icon={UserFollow} tooltip="Add member" onclick={openAddMember}
+						>Add Member</LabeledButton
 					>
 				{/if}
 			</div>

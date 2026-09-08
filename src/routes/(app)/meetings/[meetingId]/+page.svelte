@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LabeledButton from '$lib/components/LabeledButton.svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Button, Tag, InlineNotification } from 'carbon-components-svelte';
@@ -168,15 +169,14 @@
 					on:click={() => (chatOpen = !chatOpen)}
 				/>
 			{/if}
-			<Button
+			<LabeledButton
 				kind="danger"
-				class="btn--labeled"
 				icon={PhoneBlockFilled}
-				iconDescription="Leave meeting"
-				on:click={leaveMeeting}
+				tooltip="Leave meeting"
+				onclick={leaveMeeting}
 			>
 				Leave
-			</Button>
+			</LabeledButton>
 		</div>
 	</div>
 

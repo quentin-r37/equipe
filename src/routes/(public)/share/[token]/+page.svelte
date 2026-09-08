@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Button, Tile } from 'carbon-components-svelte';
+	import LabeledButton from '$lib/components/LabeledButton.svelte';
+	import { Tile } from 'carbon-components-svelte';
 	import Download from 'carbon-icons-svelte/lib/Download.svelte';
 	import WarningAlt from 'carbon-icons-svelte/lib/WarningAlt.svelte';
 	import Document from 'carbon-icons-svelte/lib/Document.svelte';
@@ -31,11 +32,10 @@
 				<Document size={32} />
 				<p class="share-name">{data.name}</p>
 				<p class="share-meta">{formatSize(data.size)}</p>
-				<Button
-					class="btn--labeled"
+				<LabeledButton
 					icon={Download}
-					iconDescription={m.share_download()}
-					href={`/api/share/${data.token}`}>{m.share_download()}</Button
+					tooltip={m.share_download()}
+					href={`/api/share/${data.token}`}>{m.share_download()}</LabeledButton
 				>
 			</div>
 		{/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LabeledButton from '$lib/components/LabeledButton.svelte';
 	import { enhance } from '$app/forms';
 	import { Button, Tile, Modal, Tag, InlineNotification } from 'carbon-components-svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
@@ -107,12 +108,8 @@
 <div class="files-container">
 	<div class="page-header">
 		<h3>Files in #{data.channel.name}</h3>
-		<Button
-			size="small"
-			icon={Add}
-			class="btn--labeled"
-			iconDescription="Upload file"
-			on:click={openUpload}>Upload</Button
+		<LabeledButton size="small" icon={Add} tooltip="Upload file" onclick={openUpload}
+			>Upload</LabeledButton
 		>
 	</div>
 
@@ -121,13 +118,12 @@
 			<div class="empty-state">
 				<DocumentMultiple01 size={32} />
 				<p>No files in this channel yet. Files attached to messages show up here too.</p>
-				<Button
+				<LabeledButton
 					size="small"
 					kind="ghost"
 					icon={Add}
-					class="btn--labeled"
-					iconDescription="Upload a file"
-					on:click={openUpload}>Upload a file</Button
+					tooltip="Upload a file"
+					onclick={openUpload}>Upload a file</LabeledButton
 				>
 			</div>
 		</Tile>

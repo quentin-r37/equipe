@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LabeledButton from '$lib/components/LabeledButton.svelte';
 	import { enhance } from '$app/forms';
 	import {
 		Button,
@@ -116,9 +117,7 @@
 <div class="page-header">
 	<h1>Files</h1>
 	{#if data.teams.length > 0}
-		<Button icon={Add} class="btn--labeled" iconDescription="Upload file" on:click={openUpload}
-			>Upload File</Button
-		>
+		<LabeledButton icon={Add} tooltip="Upload file" onclick={openUpload}>Upload File</LabeledButton>
 	{/if}
 </div>
 
@@ -130,13 +129,12 @@
 				<p>Join or create a team to start sharing files.</p>
 			{:else}
 				<p>No files uploaded yet.</p>
-				<Button
+				<LabeledButton
 					size="small"
 					kind="ghost"
 					icon={Add}
-					class="btn--labeled"
-					iconDescription="Upload your first file"
-					on:click={openUpload}>Upload your first file</Button
+					tooltip="Upload your first file"
+					onclick={openUpload}>Upload your first file</LabeledButton
 				>
 			{/if}
 		</div>
