@@ -40,6 +40,20 @@
 	let memberPending = $state(false);
 	let memberError = $state('');
 
+	// ── Rename team ──
+	let showRenameModal = $state(false);
+	let renameTeamId = $state('');
+	let renameValue = $state('');
+	let renamePending = $state(false);
+	let renameError = $state('');
+
+	function openRename(teamId: string, name: string) {
+		renameTeamId = teamId;
+		renameValue = name;
+		renameError = '';
+		showRenameModal = true;
+	}
+
 	// ── Delete confirmation ──
 	let deleteTarget = $state<{ type: 'team' | 'channel'; id: string; name: string } | null>(null);
 	let showDeleteConfirm = $state(false);
@@ -231,6 +245,10 @@
 										<OverflowMenuItem text="Add channel" on:click={() => openAddChannel(t.id)} />
 										{#if canManageMembers(t.id)}
 											<OverflowMenuItem text="Add member" on:click={() => openAddMember(t.id)} />
+											<OverflowMenuItem
+												text="Rename team"
+												on:click={() => openRename(t.id, t.name)}
+											/>
 										{/if}
 										{#if canDeleteTeam(t.id)}
 											<OverflowMenuItem
@@ -371,6 +389,38 @@
 		{/if}
 	</p>
 </ConfirmModal>
+
+<!-- Rename Team modal -->
+<Modal
+	bind:open={showRenameModal}
+	modalHeading="Rename Team"
+	primaryButtonText={renamePending ? 'Saving…' : 'Save'}
+	primaryButtonDisabled={renamePending || !renameValue.trim()}
+	secondaryButtonText="Cancel"
+	shouldSubmitOnEnter={false}
+	on:click:button--secondary={() => (showRenameModal = false)}
+	on:submit={() => submitForm('rename-team-form')}
+>
+	{#if renameError}
+		<div class="modal-error">
+			<InlineNotification kind="error" title={renameError} hideCloseButton lowContrast />
+		</div>
+	{/if}
+	<form
+		id="rename-team-form"
+		method="post"
+		action="?/renameTeam"
+		use:enhance={feedbackEnhance({
+			pending: (v) => (renamePending = v),
+			success: 'Team renamed',
+			onSuccess: () => (showRenameModal = false),
+			onError: (message) => (renameError = message)
+		})}
+	>
+		<input type="hidden" name="teamId" value={renameTeamId} />
+		<TextInput name="name" labelText="Team name" bind:value={renameValue} required />
+	</form>
+</Modal>
 
 <!-- Create Team modal -->
 <Modal

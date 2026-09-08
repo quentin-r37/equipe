@@ -176,6 +176,31 @@ export const actions: Actions = {
 
 		throw redirect(303, `/channels/${created.id}`);
 	},
+	renameTeam: async (event) => {
+		if (!event.locals.user) throw redirect(302, '/login');
+
+		const formData = await event.request.formData();
+		const teamId = formData.get('teamId')?.toString() ?? '';
+		const name = formData.get('name')?.toString()?.trim() ?? '';
+
+		if (!teamId) return fail(400, { message: 'Team ID is required' });
+		if (!name) return fail(400, { message: 'Team name is required' });
+
+		// Only owner/admin can rename
+		const [membership] = await db
+			.select()
+			.from(teamMember)
+			.where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, event.locals.user.id)))
+			.limit(1);
+
+		if (!membership || membership.role === 'member') {
+			return fail(403, { message: 'Only team owners and admins can rename the team' });
+		}
+
+		await db.update(team).set({ name }).where(eq(team.id, teamId));
+
+		return { success: true, action: 'renameTeam' as const };
+	},
 	deleteTeam: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
 
