@@ -112,7 +112,10 @@
 			hidden
 			use:enhance={feedbackEnhance({
 				pending: (v) => (pending = v),
-				success: successMessage,
+				// Read the prop lazily: `use:enhance` captures this options object once, so a
+				// message built from state set after mount (e.g. the row being deleted) would
+				// otherwise be frozen at its initial value.
+				success: () => successMessage,
 				onSuccess: () => (open = false),
 				onError: (message) => (errorMsg = message)
 			})}
