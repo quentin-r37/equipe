@@ -144,15 +144,14 @@
 					<dd>
 						<span class="kpi-value">{kpi.value}</span>
 						<span class="kpi-note">{added} {kpi.verb} · {data.trendDays}d</span>
-						<!-- A flat line on the baseline would read as a rule rather than as data,
-						     so a window with nothing in it simply gets no plot. -->
-						{#if added > 0}
-							<Sparkline
-								values={kpi.series}
-								height={32}
-								label="{kpi.label}: {added} {kpi.verb} over the last {data.trendDays} days"
-							/>
-						{/if}
+						<!-- A flat line on the baseline would read as a rule rather than as data, so a
+						     window with nothing in it draws no plot — but the slot keeps its height, so the
+						     tiles stay the same size once the band wraps onto more than one row. -->
+						<Sparkline
+							values={added > 0 ? kpi.series : []}
+							height={32}
+							label="{kpi.label}: {added} {kpi.verb} over the last {data.trendDays} days"
+						/>
 					</dd>
 				</div>
 			{/each}

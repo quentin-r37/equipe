@@ -17,7 +17,10 @@
 		label,
 		height = 40
 	}: {
-		/** One bucket per time slot, oldest first. */
+		/**
+		 * One bucket per time slot, oldest first. Pass an empty array to reserve the plot's
+		 * height without drawing anything, for a window that holds nothing to plot.
+		 */
 		values: number[];
 		/** Text alternative — the chart is decorative without it. */
 		label: string;
