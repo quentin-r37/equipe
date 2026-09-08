@@ -99,6 +99,7 @@
 								kind="ghost"
 								icon={Download}
 								iconDescription="Download {file.name}"
+								portalTooltip
 								href={`${resolve('/api/files')}?id=${encodeURIComponent(file.id)}`}
 							/>
 							<OverflowMenu size="sm" flipped portalMenu iconDescription="Actions for {file.name}">
@@ -120,7 +121,15 @@
 
 <style>
 	.file-table {
+		/*
+		 * Horizontal scrolling only. `overflow-y` must stay explicit: leaving it
+		 * `visible` makes CSS coerce it to `auto`, so any absolutely positioned
+		 * descendant (Carbon's icon-only button tooltips) adds a phantom vertical
+		 * scrollbar — which in turn steals width and triggers a horizontal one.
+		 * The row menus/tooltips are portalled, so nothing real gets clipped.
+		 */
 		overflow-x: auto;
+		overflow-y: hidden;
 		width: 100%;
 	}
 	.file-table:focus-visible {
@@ -178,7 +187,7 @@
 		justify-content: flex-end;
 	}
 	.actions-cell {
-		width: 5rem;
-		padding: 0 0.5rem;
+		width: 6rem;
+		padding: 0 1rem;
 	}
 </style>

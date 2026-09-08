@@ -115,8 +115,8 @@
 			text="Oldest first"
 		/>
 	</Select>
-	<Button type="submit">Search</Button>
-	<Button kind="ghost" href={resolve('/files')}>Reset</Button>
+	<Button size="field" type="submit">Search</Button>
+	<Button size="field" kind="ghost" href={resolve('/files')}>Reset</Button>
 </form>
 <p class="result-count" role="status">{data.total} file{data.total !== 1 ? 's' : ''} found</p>
 
@@ -330,8 +330,5 @@
 
 	.confirm-details li {
 		margin-bottom: var(--cds-spacing-02);
-	}
-
-	@media (max-width: 672px) {
 	}
 </style>

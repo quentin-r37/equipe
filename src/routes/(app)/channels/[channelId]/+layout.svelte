@@ -19,7 +19,6 @@
 	let isEditing = $state(false);
 	let editName = $state('');
 	let renamePending = $state(false);
-	let renameError = $state('');
 	let renameInput: HTMLInputElement | undefined = $state();
 
 	const canRename = $derived(
@@ -30,7 +29,6 @@
 
 	async function startEditing() {
 		editName = data.channel.name;
-		renameError = '';
 		isEditing = true;
 		await tick();
 		renameInput?.select();
@@ -38,7 +36,6 @@
 
 	function cancelEditing() {
 		isEditing = false;
-		renameError = '';
 		editName = data.channel.name;
 	}
 
@@ -51,98 +48,102 @@
 </script>
 
 <div class="channel-layout">
-	<div class="channel-header">
-		{#if isEditing}
-			<form
-				method="POST"
-				action="{basePath}?/renameChannel"
-				use:enhance={feedbackEnhance({
-					pending: (v) => (renamePending = v),
-					success: 'Channel renamed',
-					onSuccess: () => (isEditing = false),
-					onError: (message) => (renameError = message)
-				})}
-				class="rename-form"
-			>
-				<span class="hash">#</span>
-				<input
-					type="text"
-					name="name"
-					bind:value={editName}
-					bind:this={renameInput}
-					class="rename-input"
-					aria-label="Channel name"
-					aria-invalid={!!renameError}
-					disabled={renamePending}
-					onkeydown={(e) => {
-						if (e.key === 'Escape') cancelEditing();
-					}}
-				/>
-				<button
-					type="submit"
-					class="icon-btn"
-					aria-label="Save"
-					disabled={!editName.trim() || renamePending}
+	<!--
+		Title and tabs share one `--cds-ui-01` surface, the way the dashboard's blocks do: the
+		change of layer against the page background below is what separates the chrome from the
+		tab content, so neither of them needs a rule of its own.
+	-->
+	<header class="channel-chrome">
+		<div class="channel-header">
+			{#if isEditing}
+				<form
+					method="POST"
+					action="{basePath}?/renameChannel"
+					use:enhance={feedbackEnhance({
+						pending: (v) => (renamePending = v),
+						success: 'Channel renamed',
+						onSuccess: () => (isEditing = false)
+					})}
+					class="channel-title"
 				>
-					<Checkmark size={16} />
-				</button>
-				<button
-					type="button"
-					class="icon-btn"
-					aria-label="Cancel"
-					disabled={renamePending}
-					onclick={cancelEditing}
-				>
-					<Close size={16} />
-				</button>
-			</form>
-			{#if renameError}
-				<p class="rename-error" role="alert">{renameError}</p>
-			{/if}
-		{:else}
-			<div class="channel-title">
-				<h2># {data.channel.name}</h2>
-				{#if canRename}
-					<button class="icon-btn edit-btn" aria-label="Rename channel" onclick={startEditing}>
-						<Edit size={16} />
+					<span class="rename-field">
+						<span class="hash" aria-hidden="true">#</span>
+						<input
+							type="text"
+							name="name"
+							bind:value={editName}
+							bind:this={renameInput}
+							class="rename-input"
+							aria-label="Channel name"
+							disabled={renamePending}
+							onkeydown={(e) => {
+								if (e.key === 'Escape') cancelEditing();
+							}}
+						/>
+					</span>
+					<button
+						type="submit"
+						class="icon-btn"
+						aria-label="Save"
+						disabled={!editName.trim() || renamePending}
+					>
+						<Checkmark size={16} />
 					</button>
-				{/if}
-			</div>
-		{/if}
-		{#if data.channel.description}
-			<p class="channel-desc">{data.channel.description}</p>
-		{/if}
-	</div>
+					<button
+						type="button"
+						class="icon-btn"
+						aria-label="Cancel"
+						disabled={renamePending}
+						onclick={cancelEditing}
+					>
+						<Close size={16} />
+					</button>
+				</form>
+			{:else}
+				<div class="channel-title">
+					<h2><span class="hash" aria-hidden="true">#</span>{data.channel.name}</h2>
+					{#if canRename}
+						<button class="icon-btn edit-btn" aria-label="Rename channel" onclick={startEditing}>
+							<Edit size={16} />
+						</button>
+					{/if}
+				</div>
+			{/if}
+			{#if data.channel.description}
+				<p class="channel-desc">{data.channel.description}</p>
+			{/if}
+		</div>
 
-	<nav class="tab-bar" aria-label="Channel sections">
-		<a
-			href={basePath}
-			class="tab"
-			class:active={isActive('')}
-			aria-current={isActive('') ? 'page' : undefined}
-		>
-			<Chat size={16} />
-			Chat
-		</a>
-		<a
-			href="{basePath}/files"
-			class="tab"
-			class:active={isActive('/files')}
-			aria-current={isActive('/files') ? 'page' : undefined}
-		>
-			<DocumentMultiple01 size={16} />
-			Files
-		</a>
-		<a
-			href="{basePath}/meetings"
-			class="tab"
-			class:active={isActive('/meetings')}
-			aria-current={isActive('/meetings') ? 'page' : undefined}
-		>
-			<VideoChat size={16} />
-			Meetings
-		</a>
-	</nav>
+		<nav class="tab-bar" aria-label="Channel sections">
+			<a
+				href={basePath}
+				class="tab"
+				class:active={isActive('')}
+				aria-current={isActive('') ? 'page' : undefined}
+			>
+				<Chat size={16} />
+				Chat
+			</a>
+			<a
+				href="{basePath}/files"
+				class="tab"
+				class:active={isActive('/files')}
+				aria-current={isActive('/files') ? 'page' : undefined}
+			>
+				<DocumentMultiple01 size={16} />
+				Files
+			</a>
+			<a
+				href="{basePath}/meetings"
+				class="tab"
+				class:active={isActive('/meetings')}
+				aria-current={isActive('/meetings') ? 'page' : undefined}
+			>
+				<VideoChat size={16} />
+				Meetings
+			</a>
+		</nav>
+	</header>
 
 	<div class="tab-content">
 		{@render children()}
@@ -158,40 +159,73 @@
 		height: calc(100dvh - 7rem);
 	}
 
-	@media (max-width: 672px) {
-		.channel-layout {
-			height: calc(100vh - 3rem);
-			/* Leave room for the docked meeting bar so it never covers the composer. */
-			height: calc(100dvh - 3rem - var(--meeting-dock-height));
-			margin: calc(-1 * var(--cds-spacing-04));
-			/* The layout is full-bleed, so it cancels the shell's dock padding itself. */
-			margin-bottom: calc(-1 * var(--cds-spacing-04) - var(--meeting-dock-height));
-		}
-
-		.channel-header {
-			padding: var(--cds-spacing-04) var(--cds-spacing-04);
-		}
-
-		.tab-bar {
-			padding: 0 var(--cds-spacing-04);
-		}
+	.channel-chrome {
+		flex-shrink: 0;
+		background: var(--cds-ui-01);
 	}
 
 	.channel-header {
-		padding: var(--cds-spacing-05) var(--cds-spacing-06);
-		border-bottom: 1px solid var(--cds-border-subtle);
+		padding: var(--cds-spacing-05) var(--cds-spacing-06) var(--cds-spacing-04);
 	}
 
+	/*
+	 * Reading and renaming are the same row at the same size: both states sit on this box and
+	 * share its type scale, so swapping the heading for a field cannot resize the header.
+	 */
 	.channel-title {
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-03);
+		min-height: 2.5rem;
+	}
+
+	.channel-title h2,
+	.rename-input {
+		font-size: 1.25rem;
+		font-weight: 400;
+		line-height: 1.2;
 	}
 
 	.channel-title h2 {
-		margin: 0;
-		font-size: 1.125rem;
-		font-weight: 400;
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+
+	/* Same treatment as the channel links on the dashboard. */
+	.hash {
+		color: var(--cds-text-secondary);
+		margin-right: 0.375rem;
+	}
+
+	.rename-field {
+		display: flex;
+		align-items: center;
+		flex: 1;
+		min-width: 0;
+		max-width: 28rem;
+	}
+
+	.rename-input {
+		flex: 1;
+		min-width: 0;
+		background: var(--cds-field);
+		border: none;
+		border-bottom: 2px solid var(--cds-link-primary);
+		color: var(--cds-text-primary);
+		padding: var(--cds-spacing-02);
+		outline: none;
+		/* Cancels the field's own inset so the name does not jump when editing starts. */
+		margin-left: calc(-1 * var(--cds-spacing-02));
+	}
+
+	.rename-input:focus {
+		border-bottom-color: var(--cds-focus);
+	}
+
+	.channel-desc {
+		margin-top: var(--cds-spacing-02);
+		font-size: 0.875rem;
+		color: var(--cds-text-secondary);
 		overflow-wrap: anywhere;
 	}
 
@@ -203,12 +237,6 @@
 	.channel-title:hover .edit-btn,
 	.edit-btn:focus-visible {
 		opacity: 1;
-	}
-
-	.rename-error {
-		margin-top: var(--cds-spacing-02);
-		font-size: 0.75rem;
-		color: var(--cds-text-error);
 	}
 
 	.icon-btn {
@@ -233,43 +261,9 @@
 		cursor: not-allowed;
 	}
 
-	.rename-form {
-		display: flex;
-		align-items: center;
-		gap: var(--cds-spacing-03);
-	}
-
-	.hash {
-		font-size: 1.25rem;
-		font-weight: 600;
-		color: var(--cds-text-primary);
-	}
-
-	.rename-input {
-		font-size: 1.25rem;
-		font-weight: 600;
-		background: var(--cds-field);
-		border: 1px solid var(--cds-border-strong);
-		border-bottom: 2px solid var(--cds-link-primary);
-		color: var(--cds-text-primary);
-		padding: var(--cds-spacing-02) var(--cds-spacing-03);
-		outline: none;
-		min-width: 200px;
-	}
-
-	.rename-input:focus {
-		border-bottom-color: var(--cds-focus);
-	}
-
-	.channel-desc {
-		font-size: 0.875rem;
-		color: var(--cds-text-secondary);
-	}
-
 	.tab-bar {
 		display: flex;
 		padding: 0 var(--cds-spacing-06);
-		border-bottom: 1px solid var(--cds-border-subtle);
 	}
 
 	.tab {
@@ -283,7 +277,6 @@
 		font-size: 0.875rem;
 		font-weight: 500;
 		border-bottom: 2px solid transparent;
-		margin-bottom: -1px;
 		transition:
 			color var(--cds-duration-fast-02) var(--cds-motion-standard-productive),
 			border-color var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
@@ -294,7 +287,6 @@
 	}
 
 	.tab.active {
-		background: var(--cds-ui-01);
 		color: var(--cds-text-primary);
 		border-bottom-color: var(--cds-link-primary);
 	}
@@ -315,6 +307,25 @@
 	@media (hover: none) {
 		.edit-btn {
 			opacity: 1;
+		}
+	}
+
+	@media (max-width: 672px) {
+		.channel-layout {
+			height: calc(100vh - 3rem);
+			/* Leave room for the docked meeting bar so it never covers the composer. */
+			height: calc(100dvh - 3rem - var(--meeting-dock-height));
+			margin: calc(-1 * var(--cds-spacing-04));
+			/* The layout is full-bleed, so it cancels the shell's dock padding itself. */
+			margin-bottom: calc(-1 * var(--cds-spacing-04) - var(--meeting-dock-height));
+		}
+
+		.channel-header {
+			padding: var(--cds-spacing-04) var(--cds-spacing-04) var(--cds-spacing-03);
+		}
+
+		.tab-bar {
+			padding: 0 var(--cds-spacing-04);
 		}
 	}
 </style>

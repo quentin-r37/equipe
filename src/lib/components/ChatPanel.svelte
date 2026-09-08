@@ -1088,22 +1088,18 @@
 	}
 
 	/* ── Day separators ── */
+	/* A centred date chip rather than a rule across the thread: the gap above and below
+	   already breaks the run of messages, so the line has nothing left to do. */
 	.day-separator {
 		display: flex;
-		align-items: center;
-		gap: var(--cds-spacing-04);
-		margin: var(--cds-spacing-05) 0 var(--cds-spacing-04);
-	}
-
-	.day-separator::before,
-	.day-separator::after {
-		content: '';
-		flex: 1;
-		height: 1px;
-		background: var(--cds-border-subtle);
+		justify-content: center;
+		margin: var(--cds-spacing-06) 0 var(--cds-spacing-05);
 	}
 
 	.day-separator span {
+		padding: var(--cds-spacing-02) var(--cds-spacing-04);
+		border-radius: 999px;
+		background: var(--cds-ui-03);
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--cds-text-secondary);
@@ -1383,7 +1379,6 @@
 		flex-wrap: wrap;
 		gap: var(--cds-spacing-03);
 		padding: var(--cds-spacing-03) var(--cds-spacing-06);
-		border-bottom: 1px solid var(--cds-border-subtle);
 	}
 
 	.pending-file {
@@ -1436,6 +1431,15 @@
 	/* ── Input area ── */
 	.input-area {
 		position: relative;
+		/* The composer is its own surface over the thread's page background — the layer
+		   change divides it from the messages, so no rule is needed. */
+		background: var(--cds-ui-01);
+	}
+
+	/* In the meeting sidebar the whole panel is already `--cds-ui-01`, so there the layer
+	   change has nothing to say and a hairline does the dividing instead. */
+	.compact .input-area {
+		background: none;
 		border-top: 1px solid var(--cds-border-subtle);
 	}
 
@@ -1464,9 +1468,13 @@
 		padding-bottom: 0.6875rem;
 		resize: none;
 		overflow-y: auto;
+		/* `--cds-field-01` is the same value as the `--cds-ui-01` bar the composer now sits
+		   on, so the field takes the next step up to stay readable as a field. */
+		background: var(--cds-field-02);
 	}
 
 	.compact .input-field :global(.bx--text-area) {
+		background: var(--cds-field-01);
 		min-height: 2rem;
 		max-height: 6rem;
 		padding-top: var(--cds-spacing-03);
