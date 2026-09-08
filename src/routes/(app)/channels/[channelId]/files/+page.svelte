@@ -1,29 +1,15 @@
 <script lang="ts">
+	import FileTable from '$lib/components/FileTable.svelte';
 	import LabeledButton from '$lib/components/LabeledButton.svelte';
 	import { enhance } from '$app/forms';
-	import { Button, Tile, Modal, Tag, InlineNotification } from 'carbon-components-svelte';
+	import { Tile, Modal, InlineNotification } from 'carbon-components-svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
-	import Download from 'carbon-icons-svelte/lib/Download.svelte';
-	import Share from 'carbon-icons-svelte/lib/Share.svelte';
-	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import DocumentMultiple01 from 'carbon-icons-svelte/lib/DocumentMultiple_01.svelte';
-	import ImageIcon from 'carbon-icons-svelte/lib/Image.svelte';
-	import DocumentVideo from 'carbon-icons-svelte/lib/DocumentVideo.svelte';
-	import Music from 'carbon-icons-svelte/lib/Music.svelte';
-	import DocumentPdf from 'carbon-icons-svelte/lib/DocumentPdf.svelte';
-	import ZipReference from 'carbon-icons-svelte/lib/ZipReference.svelte';
-	import DocumentWordProcessor from 'carbon-icons-svelte/lib/DocumentWordProcessor.svelte';
-	import DataTable from 'carbon-icons-svelte/lib/DataTable.svelte';
-	import PresentationFile from 'carbon-icons-svelte/lib/PresentationFile.svelte';
-	import Code from 'carbon-icons-svelte/lib/Code.svelte';
-	import Document from 'carbon-icons-svelte/lib/Document.svelte';
 	import ShareFileModal from '$lib/components/ShareFileModal.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import { feedbackEnhance } from '$lib/forms';
 	import { formatSize, validateUpload, MAX_UPLOAD_BYTES } from '$lib/files';
-	import * as m from '$lib/paraglide/messages';
 	import type { PageData } from './$types';
-	import type { Component } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -78,27 +64,6 @@
 		deleteTarget = { id: f.id, name: f.name, shareCount: f.shareCount, attached: !!f.messageId };
 		showDeleteConfirm = true;
 	}
-
-	function mimeIcon(mime: string): Component {
-		if (mime.startsWith('image/')) return ImageIcon;
-		if (mime.startsWith('video/')) return DocumentVideo;
-		if (mime.startsWith('audio/')) return Music;
-		if (mime.includes('pdf')) return DocumentPdf;
-		if (mime.includes('zip') || mime.includes('tar') || mime.includes('gzip')) return ZipReference;
-		if (mime.includes('word') || mime.includes('opendocument.text')) return DocumentWordProcessor;
-		if (mime.includes('spreadsheet') || mime.includes('excel')) return DataTable;
-		if (mime.includes('presentation') || mime.includes('powerpoint')) return PresentationFile;
-		if (
-			mime.includes('javascript') ||
-			mime.includes('json') ||
-			mime.includes('xml') ||
-			mime.includes('html') ||
-			mime.includes('css') ||
-			mime.includes('typescript')
-		)
-			return Code;
-		return Document;
-	}
 </script>
 
 <svelte:head>
@@ -107,7 +72,7 @@
 
 <div class="files-container">
 	<div class="page-header">
-		<h3>Files in #{data.channel.name}</h3>
+		<h3>Files <span class="file-count">{data.files.length}</span></h3>
 		<LabeledButton size="small" icon={Add} tooltip="Upload file" onclick={openUpload}
 			>Upload</LabeledButton
 		>
@@ -128,59 +93,12 @@
 			</div>
 		</Tile>
 	{:else}
-		<div class="file-list">
-			{#each data.files as f (f.id)}
-				{@const Icon = mimeIcon(f.mimeType)}
-				<Tile>
-					<div class="file-row">
-						<div class="file-info">
-							<span class="file-icon">
-								<Icon size={24} />
-							</span>
-							<div class="file-text">
-								<p class="file-name">
-									{f.name}
-									{#if f.shareCount > 0}
-										<Tag size="sm" type="green" icon={Share}>
-											{m.share_shared({ count: f.shareCount })}
-										</Tag>
-									{/if}
-								</p>
-								<p class="file-meta">
-									{formatSize(f.size)} &middot; {f.userName} &middot;
-									{new Date(f.createdAt).toLocaleDateString()}
-								</p>
-							</div>
-						</div>
-						<div class="file-actions">
-							<Button
-								size="small"
-								kind="ghost"
-								icon={Share}
-								iconDescription="{m.share_file()}: {f.name}"
-								on:click={() => openShare(f.id)}
-							/>
-							<Button
-								size="small"
-								kind="ghost"
-								icon={Download}
-								iconDescription="Download {f.name}"
-								href="/api/files?id={f.id}"
-							/>
-							{#if f.userId === data.user.id}
-								<Button
-									size="small"
-									kind="danger-ghost"
-									icon={TrashCan}
-									iconDescription="Delete {f.name}"
-									on:click={() => confirmDelete(f)}
-								/>
-							{/if}
-						</div>
-					</div>
-				</Tile>
-			{/each}
-		</div>
+		<FileTable
+			files={data.files}
+			userId={data.user.id}
+			onshare={openShare}
+			ondelete={confirmDelete}
+		/>
 	{/if}
 </div>
 
@@ -266,6 +184,16 @@
 		margin-bottom: var(--cds-spacing-05);
 	}
 
+	.page-header h3 {
+		font-size: 1rem;
+		font-weight: 600;
+	}
+	.file-count {
+		margin-left: 0.5rem;
+		color: var(--cds-text-secondary);
+		font-weight: 400;
+		font-size: 0.875rem;
+	}
 	.empty-state {
 		display: flex;
 		flex-direction: column;
@@ -278,53 +206,6 @@
 
 	.empty-state :global(svg) {
 		color: var(--cds-icon-disabled);
-	}
-
-	.file-list {
-		display: flex;
-		flex-direction: column;
-		gap: var(--cds-spacing-03);
-	}
-
-	.file-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--cds-spacing-04);
-	}
-
-	.file-info {
-		display: flex;
-		align-items: center;
-		gap: var(--cds-spacing-04);
-		min-width: 0;
-	}
-
-	.file-text {
-		min-width: 0;
-	}
-
-	.file-icon {
-		display: flex;
-		align-items: center;
-		color: var(--cds-icon-secondary);
-	}
-
-	.file-name {
-		font-weight: 500;
-		overflow-wrap: anywhere;
-	}
-
-	.file-meta {
-		font-size: 0.875rem;
-		color: var(--cds-text-secondary);
-	}
-
-	.file-actions {
-		display: flex;
-		align-items: center;
-		gap: var(--cds-spacing-03);
-		flex-shrink: 0;
 	}
 
 	.modal-error {
@@ -365,10 +246,6 @@
 	@media (max-width: 672px) {
 		.files-container {
 			padding: var(--cds-spacing-04) var(--cds-spacing-04);
-		}
-
-		.file-row {
-			flex-wrap: wrap;
 		}
 	}
 </style>

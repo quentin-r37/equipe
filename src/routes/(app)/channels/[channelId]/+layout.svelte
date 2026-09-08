@@ -152,7 +152,6 @@
 <style>
 	.channel-layout {
 		background: var(--cds-ui-background);
-		border: 1px solid var(--cds-border-subtle);
 		display: flex;
 		flex-direction: column;
 		height: calc(100vh - 7rem);
@@ -179,7 +178,6 @@
 	}
 
 	.channel-header {
-		background: var(--cds-ui-01);
 		padding: var(--cds-spacing-05) var(--cds-spacing-06);
 		border-bottom: 1px solid var(--cds-border-subtle);
 	}
@@ -192,7 +190,7 @@
 
 	.channel-title h2 {
 		margin: 0;
-		font-size: 1.5rem;
+		font-size: 1.125rem;
 		font-weight: 400;
 		overflow-wrap: anywhere;
 	}
@@ -275,7 +273,7 @@
 	}
 
 	.tab {
-		min-height: 3rem;
+		min-height: 2.5rem;
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-03);

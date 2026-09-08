@@ -50,19 +50,19 @@
 }
 
 .bx--content > .page-header h1 {
-	font-size: clamp(1.75rem, 3vw, 2.625rem);
-	font-weight: 300;
+	font-size: clamp(1.5rem, 2vw, 2rem);
+	font-weight: 400;
 	line-height: 1.2;
 	overflow-wrap: anywhere;
 }
 
 .bx--side-nav__items {
-	padding-top: var(--cds-spacing-05);
+	padding-top: var(--cds-spacing-03);
 }
 
 .bx--side-nav__divider {
-	margin-top: var(--cds-spacing-05);
-	margin-bottom: var(--cds-spacing-05);
+	margin-top: var(--cds-spacing-03);
+	margin-bottom: var(--cds-spacing-03);
 }
 
 /* Text colors */
