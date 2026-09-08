@@ -1,6 +1,7 @@
 <script lang="ts">
 	import LabeledButton from '$lib/components/LabeledButton.svelte';
 	import { enhance } from '$app/forms';
+	import { tick } from 'svelte';
 	import {
 		Button,
 		TextInput,
@@ -26,6 +27,19 @@
 	import type { LayoutServerData } from '../../$types';
 
 	let { data }: { data: PageData & LayoutServerData } = $props();
+
+	// ── Name ──
+	let editingName = $state(false);
+	let nameValue = $state('');
+	let namePending = $state(false);
+	let nameInput: HTMLInputElement | undefined = $state();
+
+	async function startRename() {
+		nameValue = data.team.name;
+		editingName = true;
+		await tick();
+		nameInput?.select();
+	}
 
 	// ── Description ──
 	let editingDescription = $state(false);
@@ -142,7 +156,57 @@
 				href="/"
 				size="small"
 			/>
-			<h1>{data.team.name}</h1>
+			{#if editingName}
+				<form
+					method="post"
+					action="?/renameTeam"
+					class="rename-form"
+					use:enhance={feedbackEnhance({
+						pending: (v) => (namePending = v),
+						success: 'Team renamed',
+						onSuccess: () => (editingName = false)
+					})}
+				>
+					<input
+						type="text"
+						name="name"
+						bind:value={nameValue}
+						bind:this={nameInput}
+						class="rename-input"
+						aria-label="Team name"
+						disabled={namePending}
+						onkeydown={(e) => {
+							if (e.key === 'Escape') editingName = false;
+						}}
+					/>
+					<Button
+						size="small"
+						type="submit"
+						icon={Checkmark}
+						iconDescription="Save name"
+						disabled={!nameValue.trim() || namePending}
+					/>
+					<Button
+						size="small"
+						kind="ghost"
+						icon={Close}
+						iconDescription="Cancel"
+						disabled={namePending}
+						on:click={() => (editingName = false)}
+					/>
+				</form>
+			{:else}
+				<h1>{data.team.name}</h1>
+				{#if isOwnerOrAdmin}
+					<Button
+						size="small"
+						kind="ghost"
+						icon={Edit}
+						iconDescription="Rename team"
+						on:click={startRename}
+					/>
+				{/if}
+			{/if}
 			<Tag type={roleLabel[data.currentUserRole]?.type ?? 'cool-gray'}>
 				{roleLabel[data.currentUserRole]?.text ?? data.currentUserRole}
 			</Tag>
@@ -456,6 +520,36 @@
 		font-weight: 400;
 		margin: 0;
 		overflow-wrap: anywhere;
+	}
+	/*
+	 * Reading and renaming are the same row at the same size: the field carries the h1 scale
+	 * so swapping the heading for an input cannot resize the header.
+	 */
+	.rename-form {
+		display: flex;
+		align-items: center;
+		gap: var(--cds-spacing-03);
+		flex: 1;
+		min-width: 0;
+	}
+	.rename-input {
+		flex: 1;
+		min-width: 0;
+		max-width: 28rem;
+		font-size: clamp(1.5rem, 2vw, 2rem);
+		line-height: 1.3;
+		font-weight: 400;
+		background: var(--cds-field);
+		border: none;
+		border-bottom: 2px solid var(--cds-link-primary);
+		color: var(--cds-text-primary);
+		padding: var(--cds-spacing-02);
+		outline: none;
+		/* Cancels the field's own inset so the name does not jump when editing starts. */
+		margin-left: calc(-1 * var(--cds-spacing-02));
+	}
+	.rename-input:focus {
+		border-bottom-color: var(--cds-focus);
 	}
 	.team-header p {
 		margin-top: 0.5rem;

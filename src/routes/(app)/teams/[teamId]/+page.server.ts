@@ -143,6 +143,30 @@ export const actions: Actions = {
 
 		return { success: true, action: 'updateDescription' as const };
 	},
+	renameTeam: async (event) => {
+		if (!event.locals.user) throw redirect(302, '/login');
+
+		const teamId = event.params.teamId;
+		const formData = await event.request.formData();
+		const name = formData.get('name')?.toString()?.trim() ?? '';
+
+		if (!name) return fail(400, { message: 'Team name is required' });
+
+		// Only owner/admin can rename
+		const [membership] = await db
+			.select()
+			.from(teamMember)
+			.where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, event.locals.user.id)))
+			.limit(1);
+
+		if (!membership || membership.role === 'member') {
+			return fail(403, { message: 'Only team owners and admins can rename the team' });
+		}
+
+		await db.update(team).set({ name }).where(eq(team.id, teamId));
+
+		return { success: true, action: 'renameTeam' as const };
+	},
 	addMember: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
 

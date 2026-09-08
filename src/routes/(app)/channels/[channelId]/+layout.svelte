@@ -5,6 +5,7 @@
 	import type { Snippet } from 'svelte';
 	import type { LayoutServerData } from './$types';
 	import { feedbackEnhance } from '$lib/forms';
+	import { Button } from 'carbon-components-svelte';
 	import Chat from 'carbon-icons-svelte/lib/Chat.svelte';
 	import DocumentMultiple01 from 'carbon-icons-svelte/lib/DocumentMultiple_01.svelte';
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
@@ -82,31 +83,33 @@
 							}}
 						/>
 					</span>
-					<button
+					<Button
+						size="small"
 						type="submit"
-						class="icon-btn"
-						aria-label="Save"
+						icon={Checkmark}
+						iconDescription="Save name"
 						disabled={!editName.trim() || renamePending}
-					>
-						<Checkmark size={16} />
-					</button>
-					<button
-						type="button"
-						class="icon-btn"
-						aria-label="Cancel"
+					/>
+					<Button
+						size="small"
+						kind="ghost"
+						icon={Close}
+						iconDescription="Cancel"
 						disabled={renamePending}
-						onclick={cancelEditing}
-					>
-						<Close size={16} />
-					</button>
+						on:click={cancelEditing}
+					/>
 				</form>
 			{:else}
 				<div class="channel-title">
 					<h1><span class="hash" aria-hidden="true">#</span>{data.channel.name}</h1>
 					{#if canRename}
-						<button class="icon-btn edit-btn" aria-label="Rename channel" onclick={startEditing}>
-							<Edit size={16} />
-						</button>
+						<Button
+							size="small"
+							kind="ghost"
+							icon={Edit}
+							iconDescription="Rename channel"
+							on:click={startEditing}
+						/>
 					{/if}
 				</div>
 			{/if}
@@ -231,38 +234,6 @@
 		overflow-wrap: anywhere;
 	}
 
-	.edit-btn {
-		opacity: 0;
-		transition: opacity var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
-	}
-
-	.channel-title:hover .edit-btn,
-	.edit-btn:focus-visible {
-		opacity: 1;
-	}
-
-	.icon-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		background: none;
-		border: none;
-		padding: var(--cds-spacing-02);
-		color: var(--cds-text-secondary);
-		cursor: pointer;
-		border-radius: 2px;
-	}
-
-	.icon-btn:hover {
-		color: var(--cds-text-primary);
-		background: var(--cds-layer-hover);
-	}
-
-	.icon-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
 	/*
 	 * The bar's hairline is the one the shared `.page-header` rule draws under a page title;
 	 * here it doubles as the rail the active tab's marker sits on. Tabs are spaced by a gap
@@ -307,16 +278,9 @@
 		flex-direction: column;
 	}
 
-	.tab:focus-visible,
-	.icon-btn:focus-visible {
+	.tab:focus-visible {
 		outline: 2px solid var(--cds-focus);
 		outline-offset: -2px;
-	}
-
-	@media (hover: none) {
-		.edit-btn {
-			opacity: 1;
-		}
 	}
 
 	@media (max-width: 672px) {
