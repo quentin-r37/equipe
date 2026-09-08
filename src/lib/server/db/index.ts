@@ -4,12 +4,12 @@ import * as schema from './schema';
 import { env } from '$env/dynamic/private';
 import { building } from '$app/environment';
 
-let db: ReturnType<typeof drizzle<typeof schema>>;
+if (!building && !env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
 
-if (!building) {
-	if (!env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
-	const client = postgres(env.DATABASE_URL);
-	db = drizzle(client, { schema });
-}
+// postgres.js opens connections lazily, so during the build — where DATABASE_URL is
+// absent — a placeholder URL still yields a usable drizzle instance without ever
+// touching the network. The instance must exist at import time because Better Auth's
+// drizzle adapter reads `db._` as soon as `auth.ts` is evaluated.
+const client = postgres(env.DATABASE_URL || 'postgres://build:build@localhost:5432/build');
 
-export { db };
+export const db = drizzle(client, { schema });
