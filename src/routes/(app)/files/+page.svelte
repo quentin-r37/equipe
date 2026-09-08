@@ -14,6 +14,7 @@
 	} from 'carbon-components-svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
 	import DocumentMultiple01 from 'carbon-icons-svelte/lib/DocumentMultiple_01.svelte';
+	import FilterRemove from 'carbon-icons-svelte/lib/FilterRemove.svelte';
 	import ShareFileModal from '$lib/components/ShareFileModal.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import { feedbackEnhance } from '$lib/forms';
@@ -176,11 +177,8 @@
 				{#if hasFilters}
 					<h3>Nothing matches</h3>
 					<p>No files match your search. Try another name or clear the filters.</p>
-					<LabeledButton
-						kind="ghost"
-						icon={DocumentMultiple01}
-						tooltip="Clear the filters"
-						href="/files">Clear filters</LabeledButton
+					<LabeledButton kind="ghost" icon={FilterRemove} tooltip="Clear the filters" href="/files"
+						>Clear filters</LabeledButton
 					>
 				{:else if data.teams.length === 0}
 					<h3>No files yet</h3>
