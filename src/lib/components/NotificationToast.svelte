@@ -51,7 +51,7 @@
 -->
 <div class="notification-container" role="log" aria-live="polite">
 	{#each notificationState.toasts as t (t.id)}
-		<div class="notification-wrapper">
+		<div class="notification-wrapper equipe-motion-panel">
 			<ToastNotification
 				kind={t.kind}
 				title={t.title}
@@ -65,7 +65,7 @@
 		</div>
 	{/each}
 	{#each notificationState.notifications as n (n.id)}
-		<div class="notification-wrapper">
+		<div class="notification-wrapper equipe-motion-panel">
 			<ToastNotification
 				kind={getKind(n.type)}
 				subtitle="{n.channelName ? `#${n.channelName} — ` : ''}{n.teamName}"

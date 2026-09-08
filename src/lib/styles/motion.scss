@@ -16,7 +16,60 @@
 	--cds-motion-exit-productive: #{motion.motion(exit, productive)};
 }
 
+/* Opt-in entrances for transient UI. Animate opacity/translate only, without
+ * changing layout or replacing transforms used for positioning (e.g. chat pill).
+ * No fill-mode: avoid retaining a stacking context after the entrance finishes.
+ */
+.equipe-motion-fade {
+	animation: equipe-fade-in var(--cds-duration-fast-02) var(--cds-motion-entrance-productive);
+}
+
+.equipe-motion-rise {
+	animation: equipe-rise-in var(--cds-duration-moderate-01) var(--cds-motion-entrance-productive);
+}
+
+.equipe-motion-panel {
+	animation: equipe-panel-in var(--cds-duration-moderate-02) var(--cds-motion-entrance-productive);
+}
+
+@keyframes equipe-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes equipe-rise-in {
+	from {
+		opacity: 0;
+		translate: 0 var(--cds-spacing-03);
+	}
+	to {
+		opacity: 1;
+		translate: 0 0;
+	}
+}
+
+@keyframes equipe-panel-in {
+	from {
+		opacity: 0;
+		translate: var(--cds-spacing-04) 0;
+	}
+	to {
+		opacity: 1;
+		translate: 0 0;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
+	.equipe-motion-fade,
+	.equipe-motion-rise,
+	.equipe-motion-panel {
+		animation: none;
+	}
+
 	:root {
 		--cds-duration-fast-01: 0ms;
 		--cds-duration-fast-02: 0ms;

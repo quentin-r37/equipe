@@ -29,7 +29,7 @@
 	}
 </script>
 
-<div class="meeting-widget">
+<div class="meeting-widget equipe-motion-rise">
 	<div class="widget-header">
 		<span class="widget-title">{meetingState.meetingTitle}</span>
 		<span class="widget-info">

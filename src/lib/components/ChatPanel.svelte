@@ -538,7 +538,7 @@
 	onpaste={handlePaste}
 >
 	{#if dragging}
-		<div class="drop-overlay">
+		<div class="drop-overlay equipe-motion-fade">
 			<div class="drop-label">Drop files here</div>
 		</div>
 	{/if}
@@ -610,7 +610,7 @@
 							{/if}
 						</div>
 						{#if editingId === msg.id}
-							<div class="edit-row">
+							<div class="edit-row equipe-motion-fade">
 								<div class="edit-field">
 									<TextArea
 										bind:value={editContent}
@@ -719,7 +719,7 @@
 
 	<div class="input-area">
 		{#if unreadCount > 0}
-			<button class="new-messages-pill" onclick={scrollToBottom}>
+			<button class="new-messages-pill equipe-motion-rise" onclick={scrollToBottom}>
 				<ArrowDown size={16} />
 				{unreadCount} new message{unreadCount === 1 ? '' : 's'}
 			</button>
@@ -727,7 +727,7 @@
 		{#if pendingFiles.length > 0}
 			<div class="pending-files">
 				{#each pendingFiles as f, i (f.name + f.size + i)}
-					<div class="pending-file">
+					<div class="pending-file equipe-motion-fade">
 						{#if isImage(f.type)}
 							<img src={URL.createObjectURL(f)} alt={f.name} class="pending-thumb" />
 						{/if}
@@ -1213,6 +1213,15 @@
 		color: var(--cds-text-primary);
 		width: fit-content;
 		max-width: 100%;
+	}
+
+	.file-attachment,
+	.new-messages-pill,
+	.action-btn,
+	.pending-remove {
+		transition:
+			background-color var(--cds-duration-fast-02) var(--cds-motion-standard-productive),
+			color var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
 	}
 
 	.file-attachment:hover {

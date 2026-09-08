@@ -24,7 +24,7 @@
 	});
 </script>
 
-<div class="meeting-chat">
+<div class="meeting-chat equipe-motion-panel">
 	<div class="chat-header">
 		<Select bind:selected={selectedChannelId} hideLabel labelText="Channel" size="sm" noLabel>
 			{#each channels as ch (ch.id)}
