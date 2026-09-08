@@ -5,4 +5,8 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
+<svelte:head>
+	<title># {data.channel.name} · Equipe</title>
+</svelte:head>
+
 <ChatPanel channelId={data.channel.id} userId={data.user.id} initialMessages={data.messages} />

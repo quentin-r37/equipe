@@ -15,6 +15,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>{data.expired ? 'Link expired' : data.name} · Equipe</title>
+</svelte:head>
+
 <div class="share-page">
 	<Tile class="share-card">
 		{#if data.expired}
@@ -44,6 +48,7 @@
 		align-items: center;
 		justify-content: center;
 		min-height: 100vh;
+		min-height: 100dvh;
 		padding: var(--cds-spacing-05);
 		background: var(--cds-background);
 	}

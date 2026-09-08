@@ -2,10 +2,23 @@
 	import { enhance } from '$app/forms';
 	import { Button, TextInput, Tile, InlineNotification } from 'carbon-components-svelte';
 	import Logo from '$lib/components/Logo.svelte';
+	import { feedbackEnhance } from '$lib/forms';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
+
+	let submitting = $state(false);
+
+	// Failures are already rendered inline above the form, so the toast is suppressed.
+	const resetEnhance = feedbackEnhance({
+		pending: (v) => (submitting = v),
+		onError: () => {}
+	});
 </script>
+
+<svelte:head>
+	<title>Forgot password · Equipe</title>
+</svelte:head>
 
 <div class="page-container">
 	<div class="page-card">
@@ -35,18 +48,21 @@
 				<p class="description">
 					Enter your email address and we'll send you a link to reset your password.
 				</p>
-				<form method="post" use:enhance>
+				<form method="post" use:enhance={resetEnhance}>
 					<div class="form-field">
 						<TextInput
 							name="email"
 							type="email"
 							labelText="Email"
 							placeholder="email@example.com"
+							autocomplete="email"
 							required
 						/>
 					</div>
 					<div class="form-actions">
-						<Button type="submit">Send Reset Link</Button>
+						<Button type="submit" disabled={submitting}>
+							{submitting ? 'Sending…' : 'Send Reset Link'}
+						</Button>
 						<a href="/login" class="back-link">Back to Sign In</a>
 					</div>
 				</form>
@@ -58,6 +74,7 @@
 <style>
 	.page-container {
 		min-height: 100vh;
+		min-height: 100dvh;
 		display: flex;
 		align-items: center;
 		justify-content: center;

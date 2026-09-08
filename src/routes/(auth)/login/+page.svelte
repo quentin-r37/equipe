@@ -8,12 +8,24 @@
 		InlineNotification
 	} from 'carbon-components-svelte';
 	import Logo from '$lib/components/Logo.svelte';
+	import { feedbackEnhance } from '$lib/forms';
 	import type { ActionData, PageData } from './$types';
 
 	let { form, data }: { form: ActionData; data: PageData } = $props();
 
 	let mode = $state<'login' | 'register'>('login');
+	let submitting = $state(false);
+
+	// Failures are already rendered inline above the form, so the toast is suppressed.
+	const authEnhance = feedbackEnhance({
+		pending: (v) => (submitting = v),
+		onError: () => {}
+	});
 </script>
+
+<svelte:head>
+	<title>{mode === 'login' ? 'Sign in' : 'Create account'} · Equipe</title>
+</svelte:head>
 
 <div class="login-container">
 	<div class="login-card">
@@ -41,10 +53,20 @@
 				</div>
 			{/if}
 
-			<form method="post" action={mode === 'login' ? '?/signIn' : '?/signUp'} use:enhance>
+			<form
+				method="post"
+				action={mode === 'login' ? '?/signIn' : '?/signUp'}
+				use:enhance={authEnhance}
+			>
 				{#if mode === 'register'}
 					<div class="form-field">
-						<TextInput name="name" labelText="Name" placeholder="Your full name" required />
+						<TextInput
+							name="name"
+							labelText="Name"
+							placeholder="Your full name"
+							autocomplete="name"
+							required
+						/>
 					</div>
 				{/if}
 				<div class="form-field">
@@ -53,6 +75,7 @@
 						type="email"
 						labelText="Email"
 						placeholder="email@example.com"
+						autocomplete="email"
 						required
 					/>
 				</div>
@@ -61,14 +84,22 @@
 						name="password"
 						labelText="Password"
 						placeholder="Enter password"
+						autocomplete={mode === 'login' ? 'current-password' : 'new-password'}
 						required
 					/>
 				</div>
 				<div class="form-actions">
-					<Button type="submit">{mode === 'login' ? 'Sign In' : 'Register'}</Button>
+					<Button type="submit" disabled={submitting}>
+						{#if submitting}
+							{mode === 'login' ? 'Signing in…' : 'Creating account…'}
+						{:else}
+							{mode === 'login' ? 'Sign In' : 'Register'}
+						{/if}
+					</Button>
 					<button
 						type="button"
 						class="toggle-link"
+						disabled={submitting}
 						onclick={() => (mode = mode === 'login' ? 'register' : 'login')}
 					>
 						{mode === 'login' ? 'Need an account?' : 'Already have an account?'}
@@ -111,6 +142,7 @@
 <style>
 	.login-container {
 		min-height: 100vh;
+		min-height: 100dvh;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -166,6 +198,12 @@
 
 	.toggle-link:hover {
 		text-decoration: underline;
+	}
+
+	.toggle-link:disabled {
+		color: var(--cds-text-disabled);
+		cursor: not-allowed;
+		text-decoration: none;
 	}
 
 	.forgot-password {

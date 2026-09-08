@@ -2,10 +2,23 @@
 	import { enhance } from '$app/forms';
 	import { Button, PasswordInput, Tile, InlineNotification } from 'carbon-components-svelte';
 	import Logo from '$lib/components/Logo.svelte';
+	import { feedbackEnhance } from '$lib/forms';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	let submitting = $state(false);
+
+	// Failures are already rendered inline above the form, so the toast is suppressed.
+	const resetEnhance = feedbackEnhance({
+		pending: (v) => (submitting = v),
+		onError: () => {}
+	});
 </script>
+
+<svelte:head>
+	<title>Reset password · Equipe</title>
+</svelte:head>
 
 <div class="page-container">
 	<div class="page-card">
@@ -43,13 +56,14 @@
 					</div>
 				{/if}
 
-				<form method="post" use:enhance>
+				<form method="post" use:enhance={resetEnhance}>
 					<input type="hidden" name="token" value={data.token} />
 					<div class="form-field">
 						<PasswordInput
 							name="newPassword"
 							labelText="New Password"
 							placeholder="Enter new password"
+							autocomplete="new-password"
 							required
 						/>
 					</div>
@@ -58,11 +72,14 @@
 							name="confirmPassword"
 							labelText="Confirm Password"
 							placeholder="Confirm new password"
+							autocomplete="new-password"
 							required
 						/>
 					</div>
 					<div class="form-actions">
-						<Button type="submit">Reset Password</Button>
+						<Button type="submit" disabled={submitting}>
+							{submitting ? 'Resetting…' : 'Reset Password'}
+						</Button>
 					</div>
 				</form>
 			{/if}
@@ -73,6 +90,7 @@
 <style>
 	.page-container {
 		min-height: 100vh;
+		min-height: 100dvh;
 		display: flex;
 		align-items: center;
 		justify-content: center;

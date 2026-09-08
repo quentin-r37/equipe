@@ -172,11 +172,52 @@
 		padding: var(--cds-spacing-03);
 	}
 
+	/*
+	 * On phones a 240–280px floating card covers most of the screen and sits on top of the
+	 * chat composer. Collapse it into a full-width bar docked to the bottom: the self-view is
+	 * dropped and only the title and controls remain (the maximise button reopens the meeting).
+	 * The app shell reserves `--meeting-dock-height` while the bar is docked so it never
+	 * overlaps the page it sits on.
+	 */
 	@media (max-width: 672px) {
 		.meeting-widget {
-			bottom: var(--cds-spacing-05);
-			right: var(--cds-spacing-05);
-			width: 240px;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			width: auto;
+			border-radius: 0;
+			border-left: none;
+			border-right: none;
+			border-bottom: none;
+			display: flex;
+			align-items: center;
+			gap: var(--cds-spacing-03);
+			padding: var(--cds-spacing-02) var(--cds-spacing-04);
+			padding-bottom: max(var(--cds-spacing-02), env(safe-area-inset-bottom));
+		}
+
+		.widget-header {
+			flex: 1;
+			min-width: 0;
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0;
+			padding: 0;
+			border-bottom: none;
+		}
+
+		.widget-info {
+			margin-left: 0;
+		}
+
+		.widget-video {
+			display: none;
+		}
+
+		.widget-controls {
+			flex-shrink: 0;
+			padding: 0;
+			gap: var(--cds-spacing-02);
 		}
 	}
 </style>

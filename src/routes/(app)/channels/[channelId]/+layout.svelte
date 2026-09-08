@@ -154,12 +154,17 @@
 		display: flex;
 		flex-direction: column;
 		height: calc(100vh - 7rem);
+		height: calc(100dvh - 7rem);
 	}
 
 	@media (max-width: 672px) {
 		.channel-layout {
 			height: calc(100vh - 3rem);
+			/* Leave room for the docked meeting bar so it never covers the composer. */
+			height: calc(100dvh - 3rem - var(--meeting-dock-height));
 			margin: calc(-1 * var(--cds-spacing-04));
+			/* The layout is full-bleed, so it cancels the shell's dock padding itself. */
+			margin-bottom: calc(-1 * var(--cds-spacing-04) - var(--meeting-dock-height));
 		}
 
 		.channel-header {

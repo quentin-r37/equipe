@@ -69,6 +69,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>{data.meeting.title} · Equipe</title>
+</svelte:head>
+
 <div class="meeting-wrapper" class:mobile-chat={chatOpen}>
 	<div class="meeting-container">
 		<div class="meeting-header">
@@ -191,6 +195,7 @@
 	.meeting-wrapper {
 		display: flex;
 		height: calc(100vh - 7rem);
+		height: calc(100dvh - 7rem);
 		position: relative;
 	}
 
@@ -350,6 +355,7 @@
 	@media (max-width: 672px) {
 		.meeting-wrapper {
 			height: calc(100vh - 3rem);
+			height: calc(100dvh - 3rem);
 			margin: calc(-1 * var(--cds-spacing-04));
 			flex-direction: column;
 		}

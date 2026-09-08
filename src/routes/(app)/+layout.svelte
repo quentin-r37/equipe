@@ -41,6 +41,15 @@
 	const isOnMeetingPage = $derived(
 		meetingState.meetingId !== null && pathname === `/meetings/${meetingState.meetingId}`
 	);
+	const showMeetingWidget = $derived(meetingState.isActive && !isOnMeetingPage);
+
+	// On small screens the widget docks as a full-width bottom bar. Flag it on <html> so the
+	// shell can reserve `--meeting-dock-height` and the bar never covers the chat composer.
+	$effect(() => {
+		if (!browser) return;
+		document.documentElement.classList.toggle('meeting-docked', showMeetingWidget);
+		return () => document.documentElement.classList.remove('meeting-docked');
+	});
 
 	$effect(() => {
 		if (browser) {
@@ -145,7 +154,7 @@
 
 <NotificationToast />
 
-{#if meetingState.isActive && !isOnMeetingPage}
+{#if showMeetingWidget}
 	<MeetingWidget />
 {/if}
 
@@ -159,6 +168,7 @@
 	@media (max-width: 672px) {
 		:global(.bx--content) {
 			padding: var(--cds-spacing-04);
+			padding-bottom: calc(var(--cds-spacing-04) + var(--meeting-dock-height));
 		}
 	}
 </style>

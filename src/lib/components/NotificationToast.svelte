@@ -96,6 +96,7 @@
 		flex-direction: column;
 		gap: var(--cds-spacing-03);
 		max-height: calc(100vh - 4rem);
+		max-height: calc(100dvh - 4rem);
 		pointer-events: none;
 	}
 

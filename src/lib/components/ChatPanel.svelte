@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { Button, TextInput } from 'carbon-components-svelte';
+	import { Button, TextArea } from 'carbon-components-svelte';
 	import SendAlt from 'carbon-icons-svelte/lib/SendAlt.svelte';
+	import ArrowDown from 'carbon-icons-svelte/lib/ArrowDown.svelte';
 	import Attachment from 'carbon-icons-svelte/lib/Attachment.svelte';
 	import Close from 'carbon-icons-svelte/lib/Close.svelte';
 	import Download from 'carbon-icons-svelte/lib/Download.svelte';
@@ -53,6 +54,7 @@
 	let sending = $state(false);
 	let messagesContainer: HTMLDivElement | undefined = $state();
 	let fileInput: HTMLInputElement | undefined = $state();
+	let messageInput: HTMLTextAreaElement | null = $state(null);
 
 	// Edit state
 	let editingId = $state<string | null>(null);
@@ -73,16 +75,35 @@
 		showShareModal = true;
 	}
 
+	// ── Scroll management ──
+	// The fil only follows new messages when the reader is already at the bottom; otherwise
+	// the arriving messages are counted behind a pill so scrolling back to re-read is stable.
+	const STICK_THRESHOLD_PX = 100;
+	let unreadCount = $state(0);
+
+	/** True when the reader is close enough to the bottom that new messages should follow. */
+	function isNearBottom(): boolean {
+		if (!messagesContainer) return true;
+		const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+		return scrollHeight - scrollTop - clientHeight <= STICK_THRESHOLD_PX;
+	}
+
 	function scrollToBottom() {
 		if (messagesContainer) {
 			messagesContainer.scrollTop = messagesContainer.scrollHeight;
 		}
+		unreadCount = 0;
+	}
+
+	function handleMessagesScroll() {
+		if (isNearBottom()) unreadCount = 0;
 	}
 
 	$effect(() => {
 		const id = channelId;
 		const initial = untrack(() => initialMessages);
 		sseMessages = [];
+		unreadCount = 0;
 
 		if (initial) {
 			loadedMessages = [...initial];
@@ -117,14 +138,20 @@
 				const res = await fetch(`/api/messages?channelId=${id}&after=${encodeURIComponent(after)}`);
 				if (!res.ok) return;
 				const msgs: ChatMessage[] = await res.json();
+				// Decide before mutating: appending changes scrollHeight.
+				const stick = isNearBottom();
+				let added = 0;
 				for (const msg of msgs) {
 					const isDuplicate =
 						sseMessages.some((m) => m.id === msg.id) || loadedMessages.some((m) => m.id === msg.id);
 					if (!isDuplicate) {
 						sseMessages = [...sseMessages, msg];
+						added++;
 					}
 				}
-				if (msgs.length > 0) requestAnimationFrame(scrollToBottom);
+				if (added === 0) return;
+				if (stick) requestAnimationFrame(scrollToBottom);
+				else unreadCount += added;
 			} catch {
 				// Network error — will retry on next reconnect
 			}
@@ -139,8 +166,11 @@
 				const isDuplicate =
 					sseMessages.some((m) => m.id === msg.id) || loadedMessages.some((m) => m.id === msg.id);
 				if (!isDuplicate) {
+					// Read the scroll position before appending, and always follow your own message.
+					const stick = isNearBottom() || msg.userId === userId;
 					sseMessages = [...sseMessages, msg];
-					requestAnimationFrame(scrollToBottom);
+					if (stick) requestAnimationFrame(scrollToBottom);
+					else unreadCount += 1;
 				}
 			});
 
@@ -402,6 +432,86 @@
 		return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 	}
 
+	/** Full date + time, shown on hover so `HH:MM` alone is never ambiguous. */
+	function fullTimestamp(iso: string) {
+		return new Date(iso).toLocaleString();
+	}
+
+	// ── Day separators ──
+
+	function dayKey(d: Date): string {
+		return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+	}
+
+	function dayLabel(d: Date): string {
+		const today = new Date();
+		if (dayKey(d) === dayKey(today)) return 'Today';
+		// Built from parts rather than mutated, so month and year roll over on their own.
+		const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+		if (dayKey(d) === dayKey(yesterday)) return 'Yesterday';
+		return d.toLocaleDateString(undefined, {
+			weekday: 'long',
+			day: 'numeric',
+			month: 'long',
+			year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric'
+		});
+	}
+
+	/** Messages paired with the day heading to render above them, when the day changes. */
+	const timeline = $derived(
+		messages.map((msg, i) => {
+			const day = new Date(msg.createdAt);
+			const previous = i > 0 ? new Date(messages[i - 1].createdAt) : null;
+			return {
+				msg,
+				daySeparator: !previous || dayKey(previous) !== dayKey(day) ? dayLabel(day) : null
+			};
+		})
+	);
+
+	// ── Linkified message text ──
+
+	const URL_PATTERN = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+	/** Punctuation that ends a sentence rather than the URL it follows. */
+	const TRAILING_PUNCTUATION = /[.,:;!?"')\]}]+$/;
+
+	/**
+	 * Splits message text into plain and link segments. Returning segments (rather than
+	 * building HTML) keeps the text escaped by Svelte, so message content can never inject markup.
+	 */
+	function linkify(text: string): { text: string; href: string | null }[] {
+		const parts: { text: string; href: string | null }[] = [];
+		let cursor = 0;
+		for (const match of text.matchAll(URL_PATTERN)) {
+			const start = match.index ?? 0;
+			const url = match[0].replace(TRAILING_PUNCTUATION, '');
+			if (!url) continue;
+			if (start > cursor) parts.push({ text: text.slice(cursor, start), href: null });
+			parts.push({ text: url, href: url.startsWith('www.') ? `https://${url}` : url });
+			cursor = start + url.length;
+		}
+		if (cursor < text.length) parts.push({ text: text.slice(cursor), href: null });
+		return parts;
+	}
+
+	// ── Composer auto-sizing ──
+
+	const MAX_COMPOSER_HEIGHT_PX = 160;
+
+	function autoGrow(draft: string) {
+		if (!messageInput) return;
+		messageInput.style.height = 'auto';
+		// An empty draft falls back to the CSS min-height instead of a measured height.
+		messageInput.style.height = draft
+			? `${Math.min(messageInput.scrollHeight, MAX_COMPOSER_HEIGHT_PX)}px`
+			: '';
+	}
+
+	// Resize on every change of the draft: typing, sending (cleared) and restoring a failed draft.
+	$effect(() => {
+		autoGrow(newMessage);
+	});
+
 	function isImage(mimeType: string): boolean {
 		return mimeType.startsWith('image/');
 	}
@@ -432,11 +542,36 @@
 			<div class="drop-label">Drop files here</div>
 		</div>
 	{/if}
-	<div bind:this={messagesContainer} class="messages-area" role="log" aria-live="polite">
+	<!--
+		Message text with its URLs turned into links. Svelte drops the whitespace-only nodes
+		between block tags, so the indentation here does not leak into the `pre-wrap` output.
+	-->
+	{#snippet richText(content: string)}
+		{#each linkify(content) as part, i (i)}
+			{#if part.href}
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- user-supplied external URL, not an app route -->
+				<a href={part.href} target="_blank" rel="noopener noreferrer" class="message-link"
+					>{part.text}</a
+				>
+			{:else}
+				{part.text}
+			{/if}
+		{/each}
+	{/snippet}
+	<div
+		bind:this={messagesContainer}
+		class="messages-area"
+		role="log"
+		aria-live="polite"
+		onscroll={handleMessagesScroll}
+	>
 		{#if messages.length === 0}
 			<p class="empty-state">No messages yet. Start the conversation!</p>
 		{:else}
-			{#each messages as msg (msg.id)}
+			{#each timeline as { msg, daySeparator } (msg.id)}
+				{#if daySeparator}
+					<div class="day-separator"><span>{daySeparator}</span></div>
+				{/if}
 				<div class="message" class:own={isOwn(msg)}>
 					{#if !isOwn(msg)}
 						<div class="avatar">
@@ -448,7 +583,9 @@
 							{#if !isOwn(msg)}
 								<span class="author">{msg.userName}</span>
 							{/if}
-							<span class="time">{formatTime(msg.createdAt)}</span>
+							<span class="time" title={fullTimestamp(msg.createdAt)}
+								>{formatTime(msg.createdAt)}</span
+							>
 							{#if isOwn(msg)}
 								<div class="message-actions">
 									{#if editingId !== msg.id}
@@ -475,12 +612,12 @@
 						{#if editingId === msg.id}
 							<div class="edit-row">
 								<div class="edit-field">
-									<TextInput
+									<TextArea
 										bind:value={editContent}
 										on:keydown={handleEditKeydown}
 										hideLabel
 										labelText="Edit message"
-										size="sm"
+										rows={2}
 									/>
 								</div>
 								<Button
@@ -501,7 +638,7 @@
 								/>
 							</div>
 						{:else if msg.content}
-							<p class="message-text">{msg.content}</p>
+							<p class="message-text">{@render richText(msg.content)}</p>
 						{/if}
 						{#if msg.files && msg.files.length > 0}
 							<div class="message-files">
@@ -581,6 +718,12 @@
 	</div>
 
 	<div class="input-area">
+		{#if unreadCount > 0}
+			<button class="new-messages-pill" onclick={scrollToBottom}>
+				<ArrowDown size={16} />
+				{unreadCount} new message{unreadCount === 1 ? '' : 's'}
+			</button>
+		{/if}
 		{#if pendingFiles.length > 0}
 			<div class="pending-files">
 				{#each pendingFiles as f, i (f.name + f.size + i)}
@@ -619,14 +762,16 @@
 				/>
 			{/if}
 			<div class="input-field">
-				<TextInput
+				<TextArea
 					bind:value={newMessage}
-					placeholder="Type a message..."
+					bind:ref={messageInput}
+					placeholder="Type a message…"
 					on:keydown={handleKeydown}
 					hideLabel
 					labelText="Message"
-					size={compact ? 'sm' : undefined}
+					rows={1}
 				/>
+				<p class="input-hint">Enter to send · Shift + Enter for a new line</p>
 			</div>
 			<Button
 				icon={SendAlt}
@@ -806,12 +951,76 @@
 
 	.message-text {
 		margin-top: var(--cds-spacing-01);
+		/* Preserve the line breaks the composer now allows. */
+		white-space: pre-wrap;
 		word-wrap: break-word;
 		overflow-wrap: break-word;
 	}
 
 	.compact .message-text {
 		font-size: 0.8125rem;
+	}
+
+	.message-link {
+		color: var(--cds-link-primary);
+		text-decoration: underline;
+		/* Long URLs must not widen the bubble. */
+		overflow-wrap: anywhere;
+	}
+
+	.message.own .message-link {
+		color: #fff;
+	}
+
+	/* ── Day separators ── */
+	.day-separator {
+		display: flex;
+		align-items: center;
+		gap: var(--cds-spacing-04);
+		margin: var(--cds-spacing-05) 0 var(--cds-spacing-04);
+	}
+
+	.day-separator::before,
+	.day-separator::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--cds-border-subtle);
+	}
+
+	.day-separator span {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--cds-text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		white-space: nowrap;
+	}
+
+	/* ── "New messages" pill ── */
+	/* Anchored to the top edge of the input area so it never covers the composer. */
+	.new-messages-pill {
+		position: absolute;
+		bottom: calc(100% + var(--cds-spacing-03));
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 5;
+		display: flex;
+		align-items: center;
+		gap: var(--cds-spacing-02);
+		padding: var(--cds-spacing-02) var(--cds-spacing-05);
+		border: none;
+		border-radius: 999px;
+		background: var(--cds-link-primary);
+		color: var(--cds-text-on-color);
+		font-size: 0.75rem;
+		font-weight: 600;
+		cursor: pointer;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+	}
+
+	.new-messages-pill:hover {
+		background: var(--cds-hover-primary, var(--cds-link-primary));
 	}
 
 	/* ── Message actions (edit/delete) ── */
@@ -852,7 +1061,7 @@
 	/* ── Edit row ── */
 	.edit-row {
 		display: flex;
-		align-items: center;
+		align-items: flex-end;
 		gap: var(--cds-spacing-02);
 		margin-top: var(--cds-spacing-02);
 	}
@@ -1102,11 +1311,14 @@
 
 	/* ── Input area ── */
 	.input-area {
+		position: relative;
 		border-top: 1px solid var(--cds-border-subtle);
 	}
 
 	.input-row {
 		display: flex;
+		/* Keep the buttons pinned to the bottom as the composer grows. */
+		align-items: flex-end;
 		gap: var(--cds-spacing-03);
 		padding: var(--cds-spacing-05) var(--cds-spacing-06);
 	}
@@ -1117,5 +1329,46 @@
 
 	.input-field {
 		flex: 1;
+		min-width: 0;
+	}
+
+	/* The composer is a textarea sized like a single-line field until it needs to grow. */
+	.input-field :global(.bx--text-area) {
+		min-height: 2.5rem;
+		max-height: 10rem;
+		padding-top: 0.6875rem;
+		padding-bottom: 0.6875rem;
+		resize: none;
+		overflow-y: auto;
+	}
+
+	.compact .input-field :global(.bx--text-area) {
+		min-height: 2rem;
+		max-height: 6rem;
+		padding-top: var(--cds-spacing-03);
+		padding-bottom: var(--cds-spacing-03);
+		font-size: 0.8125rem;
+	}
+
+	.edit-field :global(.bx--text-area) {
+		min-height: 2.5rem;
+		resize: vertical;
+	}
+
+	.input-hint {
+		margin-top: var(--cds-spacing-02);
+		font-size: 0.6875rem;
+		color: var(--cds-text-helper);
+		/* Only surfaced while composing, so it never competes with the conversation. */
+		opacity: 0;
+		transition: opacity 0.15s;
+	}
+
+	.input-field:focus-within .input-hint {
+		opacity: 1;
+	}
+
+	.compact .input-hint {
+		display: none;
 	}
 </style>
