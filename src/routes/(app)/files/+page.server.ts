@@ -1,10 +1,11 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { file, teamMember } from '$lib/server/db/schema';
-import { eq, desc, asc, and, inArray, ilike, count, not, or } from 'drizzle-orm';
-import { countActiveSharesByFile } from '$lib/server/fileShare';
+import { file, fileShare, teamMember } from '$lib/server/db/schema';
+import { eq, desc, asc, and, inArray, ilike, count, not, or, sql } from 'drizzle-orm';
+import { countActiveSharesByFile, countActiveSharesForTeams } from '$lib/server/fileShare';
 import { FileError, storeUploadedFile, deleteFileWithCleanup } from '$lib/server/files';
+import { TREND_DAYS, emptySeries, trendWindow } from '$lib/server/trends';
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) throw redirect(302, '/login');
@@ -65,11 +66,57 @@ export const load: PageServerLoad = async (event) => {
 
 	const shareCounts = await countActiveSharesByFile(files.map((f) => f.id));
 
+	/*
+	 * The KPI band describes the whole library, not the filtered page: the figures stay put
+	 * while a search narrows the table under them, so they can be read as a baseline.
+	 */
+	const owned = inArray(file.teamId, teamIds);
+	const [library] = await db
+		.select({
+			files: sql<number>`count(*)::int`,
+			bytes: sql<number>`coalesce(sum(${file.size}), 0)::float8`,
+			mine: sql<number>`(count(*) filter (where ${file.userId} = ${userId}))::int`
+		})
+		.from(file)
+		.where(owned);
+	const activeShares = await countActiveSharesForTeams(teamIds);
+
+	/*
+	 * The series behind each sparkline: what was added per day over the trend window, oldest
+	 * first. Share links are scoped through their file rather than joined, so the bucketing
+	 * stays a single-table query like the others.
+	 */
+	const { countPerDay, sumPerDay } = trendWindow();
+	const trends =
+		teamIds.length === 0
+			? { files: emptySeries(), bytes: emptySeries(), shares: emptySeries(), mine: emptySeries() }
+			: await (async () => {
+					const [uploads, bytes, shares, mine] = await Promise.all([
+						countPerDay(file, file.createdAt, owned),
+						sumPerDay(file, file.createdAt, file.size, owned),
+						countPerDay(
+							fileShare,
+							fileShare.createdAt,
+							sql`${fileShare.fileId} in (select ${file.id} from ${file} where ${owned})`
+						),
+						countPerDay(file, file.createdAt, and(owned, eq(file.userId, userId)))
+					]);
+					return { files: uploads, bytes, shares, mine };
+				})();
+
 	return {
 		filters: { q, team: selectedTeam, type, sort },
 		total,
 		currentPage,
 		pageCount,
+		library: {
+			files: library?.files ?? 0,
+			bytes: library?.bytes ?? 0,
+			shares: activeShares,
+			mine: library?.mine ?? 0
+		},
+		trends,
+		trendDays: TREND_DAYS,
 		files: files.map((f) => ({
 			...f,
 			createdAt: f.createdAt.toISOString(),

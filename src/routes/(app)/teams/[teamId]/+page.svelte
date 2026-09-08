@@ -21,7 +21,7 @@
 	import Close from 'carbon-icons-svelte/lib/Close.svelte';
 	import Email from 'carbon-icons-svelte/lib/Email.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
-	import Sparkline from '$lib/components/Sparkline.svelte';
+	import KpiBand from '$lib/components/KpiBand.svelte';
 	import { feedbackEnhance } from '$lib/forms';
 	import type { PageData } from './$types';
 	import type { LayoutServerData } from '../../$types';
@@ -214,26 +214,7 @@
 		<p>This team at a glance.</p>
 	</header>
 
-	<dl class="workspace-summary">
-		{#each kpis as kpi (kpi.label)}
-			{@const added = kpi.series.reduce((a, b) => a + b, 0)}
-			<div class="kpi">
-				<dt>{kpi.label}</dt>
-				<dd>
-					<span class="kpi-value">{kpi.value}</span>
-					<span class="kpi-note">{added} {kpi.verb} · {data.trendDays}d</span>
-					<!-- A flat line on the baseline would read as a rule rather than as data, so a
-					     window with nothing in it draws no plot — but the slot keeps its height, so the
-					     tiles stay the same size once the band wraps onto more than one row. -->
-					<Sparkline
-						values={added > 0 ? kpi.series : []}
-						height={32}
-						label="{kpi.label}: {added} {kpi.verb} over the last {data.trendDays} days"
-					/>
-				</dd>
-			</div>
-		{/each}
-	</dl>
+	<KpiBand {kpis} days={data.trendDays} />
 
 	<div class="team-columns">
 		<!-- Members -->
@@ -560,53 +541,6 @@
 		background: var(--cds-ui-01);
 		padding: var(--cds-spacing-05) var(--cds-spacing-06) var(--cds-spacing-06);
 	}
-	.workspace-summary {
-		display: flex;
-		flex-wrap: wrap;
-		background: var(--cds-ui-01);
-		/* No side or bottom padding: each cell's sparkline runs to its own edges. The inset
-		   is carried by the text inside the cells instead. */
-		padding: var(--cds-spacing-05) 0 0;
-		margin: 0 0 var(--cds-spacing-05);
-	}
-	.kpi {
-		display: flex;
-		flex-direction: column;
-		flex: 1 1 8rem;
-		border-left: 1px solid var(--cds-border-subtle);
-	}
-	.kpi:first-child {
-		border-left: none;
-	}
-	.kpi dd {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-	}
-	.kpi dt,
-	.kpi-value,
-	.kpi-note {
-		padding: 0 var(--cds-spacing-06);
-	}
-	.kpi dt {
-		color: var(--cds-text-secondary);
-		font-size: 0.75rem;
-	}
-	.kpi-value {
-		font-size: 1.75rem;
-		font-weight: 300;
-		line-height: 1.2;
-		font-variant-numeric: tabular-nums;
-	}
-	.kpi-note {
-		color: var(--cds-text-secondary);
-		font-size: 0.6875rem;
-	}
-	/* Anchor the plot to the bottom so the four line up despite unequal text height. */
-	.kpi :global(.sparkline) {
-		margin-top: auto;
-		padding-top: var(--cds-spacing-04);
-	}
 	.team-columns {
 		display: grid;
 		grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
@@ -728,26 +662,6 @@
 		.team-columns {
 			grid-template-columns: minmax(0, 1fr);
 			gap: 2rem;
-		}
-	}
-	@media (max-width: 672px) {
-		/*
-		 * Once the cells wrap, a left-border filet would reappear at the start of the second
-		 * row (CSS can't see row starts in a flex container). Below this breakpoint the band
-		 * drops the filets and separates by gutter instead — the same layering rule the rest
-		 * of the page follows.
-		 */
-		.workspace-summary {
-			display: grid;
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-			gap: 1px;
-			background: var(--cds-ui-background);
-			padding: 0;
-		}
-		.kpi {
-			background: var(--cds-ui-01);
-			border-left: none;
-			padding-top: var(--cds-spacing-05);
 		}
 	}
 </style>

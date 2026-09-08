@@ -57,5 +57,26 @@ export function trendWindow() {
 		return bucketize(rows);
 	};
 
-	return { since, countPerDay };
+	/**
+	 * Daily sums of `value` for one table, oldest first, narrowed by `scope`.
+	 *
+	 * The sum is cast to `float8` rather than an integer: a bucket can hold a day's worth of
+	 * uploaded bytes, which overflows `int4` well before it troubles a double.
+	 */
+	const sumPerDay = async (
+		table: PgTable,
+		col: AnyPgColumn,
+		value: AnyPgColumn,
+		scope: SQL | undefined
+	) => {
+		const day = dayOf(col);
+		const rows = await db
+			.select({ day, total: sql<number>`coalesce(sum(${value}), 0)::float8` })
+			.from(table)
+			.where(and(scope, gte(col, since)))
+			.groupBy(day);
+		return bucketize(rows);
+	};
+
+	return { since, countPerDay, sumPerDay };
 }

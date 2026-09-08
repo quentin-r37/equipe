@@ -29,7 +29,20 @@ vi.mock('$lib/server/db', () => ({
 		}
 	}
 }));
-vi.mock('$lib/server/fileShare', () => ({ countActiveSharesByFile: async () => new Map() }));
+vi.mock('$lib/server/fileShare', () => ({
+	countActiveSharesByFile: async () => new Map(),
+	countActiveSharesForTeams: async () => 0
+}));
+// The KPI band has its own queries; these tests are about the filter/pagination SQL.
+vi.mock('$lib/server/trends', () => ({
+	TREND_DAYS: 14,
+	emptySeries: () => new Array(14).fill(0),
+	trendWindow: () => ({
+		since: new Date(),
+		countPerDay: async () => new Array(14).fill(0),
+		sumPerDay: async () => new Array(14).fill(0)
+	})
+}));
 vi.mock('$lib/server/files', () => ({
 	FileError: class extends Error {},
 	storeUploadedFile: vi.fn(),

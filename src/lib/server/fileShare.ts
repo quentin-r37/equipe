@@ -56,6 +56,22 @@ export async function countActiveSharesByFile(fileIds: string[]): Promise<Map<st
 }
 
 /**
+ * Total number of shares that are still usable across every file owned by the given teams.
+ * Used by the files page KPI band, which counts links rather than files.
+ */
+export async function countActiveSharesForTeams(teamIds: string[]): Promise<number> {
+	if (teamIds.length === 0) return 0;
+
+	const [row] = await db
+		.select({ total: sql<number>`count(*)::int` })
+		.from(fileShare)
+		.innerJoin(file, eq(fileShare.fileId, file.id))
+		.where(and(inArray(file.teamId, teamIds), activeShareCondition()));
+
+	return row?.total ?? 0;
+}
+
+/**
  * List the active shares for a single file, newest first.
  */
 export async function listActiveShares(fileId: string): Promise<(typeof fileShare.$inferSelect)[]> {
