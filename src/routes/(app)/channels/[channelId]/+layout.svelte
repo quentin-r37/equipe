@@ -193,7 +193,7 @@
 
 	.edit-btn {
 		opacity: 0;
-		transition: opacity 0.15s;
+		transition: opacity var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
 	}
 
 	.channel-title:hover .edit-btn,
@@ -280,8 +280,8 @@
 		border-bottom: 2px solid transparent;
 		margin-bottom: -1px;
 		transition:
-			color 0.15s,
-			border-color 0.15s;
+			color var(--cds-duration-fast-02) var(--cds-motion-standard-productive),
+			border-color var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
 	}
 
 	.tab:hover {

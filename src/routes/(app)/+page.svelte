@@ -614,7 +614,7 @@
 		justify-content: space-between;
 		padding: var(--cds-spacing-02) var(--cds-spacing-03);
 		border-radius: 4px;
-		transition: background 0.15s;
+		transition: background var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
 	}
 
 	.channel-item:hover {
@@ -697,7 +697,14 @@
 		border-radius: 50%;
 		background: #24a148;
 		flex-shrink: 0;
-		animation: pulse 2s ease-in-out infinite;
+		/* A status pulse keeps its slow cadence; interaction durations apply to transitions. */
+		animation: pulse 2s var(--cds-motion-standard-productive) infinite;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.meeting-dot {
+			animation: none;
+		}
 	}
 
 	@keyframes pulse {
@@ -775,7 +782,7 @@
 		font-size: 0.8125rem;
 		color: var(--cds-text-secondary);
 		margin: 0;
-		transition: color 0.15s;
+		transition: color var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
 	}
 
 	/* Forms */

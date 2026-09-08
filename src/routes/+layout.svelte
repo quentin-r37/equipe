@@ -3,6 +3,7 @@
 	import { locales, localizeHref } from '$lib/paraglide/runtime';
 	import { Theme } from 'carbon-components-svelte';
 	import 'carbon-components-svelte/css/all.css';
+	import '$lib/styles/motion.scss';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { applyAccent, loadAccent, themeState } from '$lib/stores/theme.svelte';

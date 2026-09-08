@@ -1029,7 +1029,7 @@
 		gap: 2px;
 		margin-left: auto;
 		opacity: 0;
-		transition: opacity 0.15s;
+		transition: opacity var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
 	}
 
 	.message:hover .message-actions,
@@ -1098,7 +1098,7 @@
 		color: var(--cds-text-secondary);
 		padding: 2px;
 		opacity: 0;
-		transition: opacity 0.15s;
+		transition: opacity var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
 	}
 
 	.file-wrapper:hover .file-remove-btn,
@@ -1136,7 +1136,7 @@
 		color: var(--cds-text-secondary);
 		padding: 2px;
 		opacity: 0;
-		transition: opacity 0.15s;
+		transition: opacity var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
 	}
 
 	/* Shift the share button left to make room for the remove button on own messages. */
@@ -1361,7 +1361,7 @@
 		color: var(--cds-text-helper);
 		/* Only surfaced while composing, so it never competes with the conversation. */
 		opacity: 0;
-		transition: opacity 0.15s;
+		transition: opacity var(--cds-duration-fast-02) var(--cds-motion-standard-productive);
 	}
 
 	.input-field:focus-within .input-hint {

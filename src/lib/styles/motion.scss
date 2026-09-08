@@ -1,0 +1,28 @@
+@use '@carbon/motion';
+
+/* Official Carbon Motion values, shared by component-scoped CSS.
+ * https://carbondesignsystem.com/elements/motion/code/
+ * Use productive motion for everyday interactions in this collaboration app.
+ */
+:root {
+	--cds-duration-fast-01: #{motion.$duration-fast-01};
+	--cds-duration-fast-02: #{motion.$duration-fast-02};
+	--cds-duration-moderate-01: #{motion.$duration-moderate-01};
+	--cds-duration-moderate-02: #{motion.$duration-moderate-02};
+	--cds-duration-slow-01: #{motion.$duration-slow-01};
+	--cds-duration-slow-02: #{motion.$duration-slow-02};
+	--cds-motion-standard-productive: #{motion.motion(standard, productive)};
+	--cds-motion-entrance-productive: #{motion.motion(entrance, productive)};
+	--cds-motion-exit-productive: #{motion.motion(exit, productive)};
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--cds-duration-fast-01: 0ms;
+		--cds-duration-fast-02: 0ms;
+		--cds-duration-moderate-01: 0ms;
+		--cds-duration-moderate-02: 0ms;
+		--cds-duration-slow-01: 0ms;
+		--cds-duration-slow-02: 0ms;
+	}
+}
