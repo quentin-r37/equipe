@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Button } from 'carbon-components-svelte';
+	import PortalTooltip from 'carbon-components-svelte/src/Portal/PortalTooltip.svelte';
 	import type { ComponentProps, Snippet } from 'svelte';
 
 	type Props = Omit<ComponentProps<Button>, 'iconDescription' | 'children' | 'onclick'> & {
@@ -14,29 +15,47 @@
 		class: className = '',
 		disabled = false,
 		hideTooltip = false,
+		ref = $bindable(null),
 		onclick,
 		children,
 		...rest
 	}: Props = $props();
+	let hovered = $state(false);
+	let focused = $state(false);
 	let dismissed = $state(false);
 </script>
 
-<!-- Carbon's tooltip classes also support buttons with visible labels. -->
+<!-- Keep tooltip trigger CSS off the button: it resets Carbon backgrounds and padding. -->
 <Button
 	{...rest}
 	{disabled}
-	class="btn--labeled bx--tooltip__trigger bx--tooltip--a11y bx--btn--icon-only--{tooltipPosition} bx--tooltip--align-{tooltipAlignment} {disabled ||
-	hideTooltip ||
-	dismissed
-		? 'bx--tooltip--hidden'
-		: ''} {className}"
-	on:click={(event) => onclick?.(event)}
-	on:mouseenter={() => (dismissed = false)}
-	on:focus={() => (dismissed = false)}
+	bind:ref
+	class="btn--labeled {className}"
+	on:click={(event) => {
+		dismissed = true;
+		onclick?.(event);
+	}}
+	on:mouseenter={() => {
+		hovered = true;
+		dismissed = false;
+	}}
+	on:mouseleave={() => (hovered = false)}
+	on:focus={() => {
+		focused = true;
+		dismissed = false;
+	}}
+	on:blur={() => (focused = false)}
 	onkeydown={(event) => {
 		if (event.key === 'Escape') dismissed = true;
 	}}
 >
-	<span class="bx--assistive-text" aria-hidden="true" style="pointer-events: none">{tooltip}</span>
 	{@render children()}
 </Button>
+<PortalTooltip
+	anchor={ref}
+	direction={tooltipPosition}
+	intrinsicAlign={tooltipAlignment}
+	open={(hovered || focused) && !disabled && !hideTooltip && !dismissed}
+	text={tooltip}
+	tooltipType="icon"
+/>
