@@ -1,16 +1,34 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { Button, Tile, Tag } from 'carbon-components-svelte';
+	import { Button, Tile, Tag, TextInput } from 'carbon-components-svelte';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import type { PageData } from './$types';
 	import type { LayoutServerData } from '../../$types';
 
 	let { data }: { data: PageData & LayoutServerData } = $props();
+
+	let deleteTarget = $state<{ id: string; name: string; email: string } | null>(null);
+	let showDeleteConfirm = $state(false);
+	let typedEmail = $state('');
+
+	function confirmDelete(u: { id: string; name: string; email: string }) {
+		deleteTarget = u;
+		typedEmail = '';
+		showDeleteConfirm = true;
+	}
+
+	const emailMatches = $derived(
+		!!deleteTarget && typedEmail.trim().toLowerCase() === deleteTarget.email.toLowerCase()
+	);
 </script>
+
+<svelte:head>
+	<title>User management · Equipe</title>
+</svelte:head>
 
 <div class="page-header">
 	<h1>User Management</h1>
-	<Tag type="purple">{data.users.length} users</Tag>
+	<Tag type="purple">{data.users.length} {data.users.length === 1 ? 'user' : 'users'}</Tag>
 </div>
 
 {#if data.users.length === 0}
@@ -28,6 +46,8 @@
 							{u.email}
 							{#if u.emailVerified}
 								<Tag size="sm" type="green">verified</Tag>
+							{:else}
+								<Tag size="sm" type="warm-gray">not verified</Tag>
 							{/if}
 						</p>
 						<p class="user-meta">
@@ -36,16 +56,13 @@
 					</div>
 					<div class="user-actions">
 						{#if u.id !== data.user.id}
-							<form method="post" action="?/delete" use:enhance>
-								<input type="hidden" name="userId" value={u.id} />
-								<Button
-									size="small"
-									kind="danger-ghost"
-									icon={TrashCan}
-									iconDescription="Delete user"
-									type="submit"
-								/>
-							</form>
+							<Button
+								size="small"
+								kind="danger-ghost"
+								icon={TrashCan}
+								iconDescription="Delete {u.email}"
+								on:click={() => confirmDelete(u)}
+							/>
 						{:else}
 							<Tag size="sm" type="blue">you</Tag>
 						{/if}
@@ -55,6 +72,29 @@
 		{/each}
 	</div>
 {/if}
+
+<ConfirmModal
+	bind:open={showDeleteConfirm}
+	heading="Delete user account"
+	confirmLabel="Delete account"
+	action="?/delete"
+	fields={{ userId: deleteTarget?.id ?? '' }}
+	confirmDisabled={!emailMatches}
+	successMessage={`Account ${deleteTarget?.email} deleted`}
+>
+	<p>
+		This permanently deletes <strong>{deleteTarget?.name}</strong>'s account, their sessions and
+		their team memberships. Their messages and files stay in the teams. This cannot be undone.
+	</p>
+	<div class="confirm-input">
+		<TextInput
+			labelText="Type the account email to confirm"
+			placeholder={deleteTarget?.email}
+			bind:value={typedEmail}
+			autocomplete="off"
+		/>
+	</div>
+</ConfirmModal>
 
 <style>
 	.page-header {
@@ -80,6 +120,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+		gap: var(--cds-spacing-04);
+		flex-wrap: wrap;
 	}
 
 	.user-name {
@@ -92,11 +134,16 @@
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-03);
+		flex-wrap: wrap;
 	}
 
 	.user-actions {
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-03);
+	}
+
+	.confirm-input {
+		margin-top: var(--cds-spacing-05);
 	}
 </style>

@@ -1,7 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { user, session, account } from '$lib/server/db/auth.schema';
+import { user } from '$lib/server/db/auth.schema';
 import { eq } from 'drizzle-orm';
 import { isAdmin } from '$lib/server/admin';
 
@@ -48,6 +48,6 @@ export const actions: Actions = {
 		// Cascade: sessions and accounts are FK cascade, so just delete user
 		await db.delete(user).where(eq(user.id, userId));
 
-		return { success: true };
+		return { success: true, action: 'delete' as const, email: target.email };
 	}
 };

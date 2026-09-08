@@ -109,7 +109,7 @@ export const actions: Actions = {
 
 		await db.update(team).set({ description }).where(eq(team.id, teamId));
 
-		return { success: true };
+		return { success: true, action: 'updateDescription' as const };
 	},
 	addMember: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
@@ -118,7 +118,7 @@ export const actions: Actions = {
 		const formData = await event.request.formData();
 		const email = formData.get('email')?.toString()?.trim().toLowerCase() ?? '';
 
-		if (!email) return fail(400, { addMemberError: 'Email is required' });
+		if (!email) return fail(400, { message: 'Email is required' });
 
 		// Only owner/admin can add
 		const [membership] = await db
@@ -128,7 +128,7 @@ export const actions: Actions = {
 			.limit(1);
 
 		if (!membership || membership.role === 'member') {
-			return fail(403, { addMemberError: 'Only team owners and admins can add members' });
+			return fail(403, { message: 'Only team owners and admins can add members' });
 		}
 
 		// Find user by email
@@ -147,7 +147,7 @@ export const actions: Actions = {
 				.limit(1);
 
 			if (existing) {
-				return fail(409, { addMemberError: 'This user is already a member' });
+				return fail(409, { message: 'This user is already a member' });
 			}
 
 			await db.insert(teamMember).values({
@@ -156,7 +156,7 @@ export const actions: Actions = {
 				role: 'member'
 			});
 
-			return { success: true, invited: false };
+			return { success: true, action: 'addMember' as const, invited: false, email };
 		}
 
 		// User doesn't exist — send invitation
@@ -173,7 +173,7 @@ export const actions: Actions = {
 			.limit(1);
 
 		if (existingInvitation) {
-			return fail(409, { addMemberError: 'An invitation has already been sent to this email' });
+			return fail(409, { message: 'An invitation has already been sent to this email' });
 		}
 
 		// Get team name for email
@@ -209,7 +209,7 @@ export const actions: Actions = {
 			)
 		});
 
-		return { success: true, invited: true };
+		return { success: true, action: 'addMember' as const, invited: true, email };
 	},
 	removeMember: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
@@ -255,10 +255,10 @@ export const actions: Actions = {
 
 		// If the user removed themselves, redirect to dashboard
 		if (isSelf) {
-			throw redirect(302, '/');
+			throw redirect(303, '/');
 		}
 
-		return { success: true };
+		return { success: true, action: 'removeMember' as const };
 	},
 	updateRole: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
@@ -294,7 +294,7 @@ export const actions: Actions = {
 
 		await db.update(teamMember).set({ role: newRole }).where(eq(teamMember.id, memberId));
 
-		return { success: true };
+		return { success: true, action: 'updateRole' as const, role: newRole };
 	},
 	cancelInvitation: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
@@ -320,6 +320,6 @@ export const actions: Actions = {
 			.delete(teamInvitation)
 			.where(and(eq(teamInvitation.id, invitationId), eq(teamInvitation.teamId, teamId)));
 
-		return { success: true };
+		return { success: true, action: 'cancelInvitation' as const };
 	}
 };

@@ -57,7 +57,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Core tables: `team`, `team_member` (roles: owner/admin/member), `channel`, `message`, `meeting`, `file`. Auth tables are generated in `auth.schema.ts` via `npm run auth:schema`.
 
-All IDs are UUIDs (text columns with `crypto.randomUUID()`). Foreign keys use `onDelete: 'cascade'` (except `file.channelId` which is `set null`).
+All IDs are UUIDs (text columns with `crypto.randomUUID()`). All foreign keys use `onDelete: 'cascade'` (including `file.channelId` and `file.messageId`). Note that a DB cascade never removes SeaweedFS blobs: always go through `deleteFileWithCleanup` / `storeUploadedFile` in `$lib/server/files.ts` rather than touching the `file` table directly.
 
 ### Styling
 

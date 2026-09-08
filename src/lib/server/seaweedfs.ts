@@ -18,5 +18,9 @@ export async function downloadFile(path: string): Promise<Response> {
 }
 
 export async function deleteFile(path: string): Promise<void> {
-	await fetch(`${filerUrl()}/${path}`, { method: 'DELETE' });
+	const res = await fetch(`${filerUrl()}/${path}`, { method: 'DELETE' });
+	// 404 means the blob is already gone, which is the state we want.
+	if (!res.ok && res.status !== 404) {
+		throw new Error(`SeaweedFS delete failed: ${res.statusText}`);
+	}
 }

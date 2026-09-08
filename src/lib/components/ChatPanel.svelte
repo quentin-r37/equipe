@@ -10,6 +10,10 @@
 	import Checkmark from 'carbon-icons-svelte/lib/Checkmark.svelte';
 	import Share from 'carbon-icons-svelte/lib/Share.svelte';
 	import ShareFileModal from '$lib/components/ShareFileModal.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import { untrack } from 'svelte';
+	import { notificationState } from '$lib/stores/notifications.svelte';
+	import { formatSize, validateUpload } from '$lib/files';
 	import * as m from '$lib/paraglide/messages';
 
 	interface ChatFile {
@@ -58,6 +62,12 @@
 	let showShareModal = $state(false);
 	let shareFileId = $state('');
 
+	// Delete confirmations
+	let deleteMessageTarget = $state<ChatMessage | null>(null);
+	let showDeleteMessage = $state(false);
+	let deleteFileTarget = $state<{ file: ChatFile; message: ChatMessage } | null>(null);
+	let showDeleteFile = $state(false);
+
 	function openShare(id: string) {
 		shareFileId = id;
 		showShareModal = true;
@@ -71,10 +81,11 @@
 
 	$effect(() => {
 		const id = channelId;
+		const initial = untrack(() => initialMessages);
 		sseMessages = [];
 
-		if (initialMessages) {
-			loadedMessages = [...initialMessages];
+		if (initial) {
+			loadedMessages = [...initial];
 		} else {
 			// Fetch messages via API when no initial data (e.g. meeting chat)
 			loadedMessages = [];
@@ -179,16 +190,30 @@
 		};
 	});
 
+	/** Reads the error message from a failed API response, falling back to a generic one. */
+	async function responseError(res: Response, fallback: string): Promise<string> {
+		try {
+			const body = await res.json();
+			if (body && typeof body.message === 'string' && body.message) return body.message;
+		} catch {
+			// Not JSON
+		}
+		if (res.status === 413) return 'The files are too large to upload.';
+		return fallback;
+	}
+
 	async function sendMessage() {
 		const content = newMessage.trim();
 		if (!content && pendingFiles.length === 0) return;
 
 		sending = true;
+		const draft = newMessage;
 		newMessage = '';
 		const filesToSend = [...pendingFiles];
 		pendingFiles = [];
 
 		try {
+			let res: Response;
 			if (filesToSend.length > 0) {
 				const formData = new FormData();
 				formData.append('channelId', channelId);
@@ -196,14 +221,25 @@
 				for (const f of filesToSend) {
 					formData.append('files', f);
 				}
-				await fetch('/api/messages', { method: 'POST', body: formData });
+				res = await fetch('/api/messages', { method: 'POST', body: formData });
 			} else {
-				await fetch('/api/messages', {
+				res = await fetch('/api/messages', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ channelId, content })
 				});
 			}
+			if (!res.ok) {
+				throw new Error(await responseError(res, 'Your message could not be sent.'));
+			}
+		} catch (err) {
+			// Give the draft back so nothing typed or attached is lost.
+			newMessage = draft;
+			pendingFiles = filesToSend;
+			notificationState.toast(
+				'error',
+				err instanceof Error && err.message ? err.message : 'Your message could not be sent.'
+			);
 		} finally {
 			sending = false;
 		}
@@ -229,7 +265,19 @@
 	}
 
 	function addFiles(files: FileList | File[]) {
-		pendingFiles = [...pendingFiles, ...Array.from(files)];
+		const accepted: File[] = [];
+		for (const f of Array.from(files)) {
+			const problem = validateUpload(f);
+			if (problem) {
+				notificationState.toast('error', problem);
+				continue;
+			}
+			const duplicate = [...pendingFiles, ...accepted].some(
+				(p) => p.name === f.name && p.size === f.size && p.lastModified === f.lastModified
+			);
+			if (!duplicate) accepted.push(f);
+		}
+		if (accepted.length > 0) pendingFiles = [...pendingFiles, ...accepted];
 	}
 
 	function removePendingFile(index: number) {
@@ -293,15 +341,29 @@
 		editContent = '';
 	}
 
+	let savingEdit = $state(false);
+
 	async function saveEdit() {
-		if (!editingId) return;
-		await fetch('/api/messages', {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ id: editingId, content: editContent })
-		});
-		editingId = null;
-		editContent = '';
+		if (!editingId || savingEdit) return;
+		savingEdit = true;
+		try {
+			const res = await fetch('/api/messages', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ id: editingId, content: editContent })
+			});
+			if (!res.ok) throw new Error(await responseError(res, 'The message could not be updated.'));
+			editingId = null;
+			editContent = '';
+		} catch (err) {
+			// Stay in edit mode so the change is not lost.
+			notificationState.toast(
+				'error',
+				err instanceof Error && err.message ? err.message : 'The message could not be updated.'
+			);
+		} finally {
+			savingEdit = false;
+		}
 	}
 
 	function handleEditKeydown(e: KeyboardEvent) {
@@ -314,22 +376,30 @@
 		}
 	}
 
-	async function deleteMessage(id: string) {
-		await fetch(`/api/messages?id=${id}`, { method: 'DELETE' });
+	function askDeleteMessage(msg: ChatMessage) {
+		deleteMessageTarget = msg;
+		showDeleteMessage = true;
 	}
 
-	async function deleteFileFromMessage(fileId: string) {
-		await fetch(`/api/files?id=${fileId}`, { method: 'DELETE' });
+	async function deleteMessage() {
+		if (!deleteMessageTarget) return;
+		const res = await fetch(`/api/messages?id=${deleteMessageTarget.id}`, { method: 'DELETE' });
+		if (!res.ok) throw new Error(await responseError(res, 'The message could not be deleted.'));
+	}
+
+	function askDeleteFile(file: ChatFile, message: ChatMessage) {
+		deleteFileTarget = { file, message };
+		showDeleteFile = true;
+	}
+
+	async function deleteFileFromMessage() {
+		if (!deleteFileTarget) return;
+		const res = await fetch(`/api/files?id=${deleteFileTarget.file.id}`, { method: 'DELETE' });
+		if (!res.ok) throw new Error(await responseError(res, 'The file could not be deleted.'));
 	}
 
 	function formatTime(iso: string) {
 		return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-	}
-
-	function formatSize(bytes: number): string {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 	}
 
 	function isImage(mimeType: string): boolean {
@@ -362,7 +432,7 @@
 			<div class="drop-label">Drop files here</div>
 		</div>
 	{/if}
-	<div bind:this={messagesContainer} class="messages-area">
+	<div bind:this={messagesContainer} class="messages-area" role="log" aria-live="polite">
 		{#if messages.length === 0}
 			<p class="empty-state">No messages yet. Start the conversation!</p>
 		{:else}
@@ -382,14 +452,20 @@
 							{#if isOwn(msg)}
 								<div class="message-actions">
 									{#if editingId !== msg.id}
-										<button class="action-btn" title="Edit" onclick={() => startEdit(msg)}>
+										<button
+											class="action-btn"
+											title="Edit message"
+											aria-label="Edit message"
+											onclick={() => startEdit(msg)}
+										>
 											<Edit size={16} />
 										</button>
 									{/if}
 									<button
 										class="action-btn danger"
-										title="Delete"
-										onclick={() => deleteMessage(msg.id)}
+										title="Delete message"
+										aria-label="Delete message"
+										onclick={() => askDeleteMessage(msg)}
 									>
 										<TrashCan size={16} />
 									</button>
@@ -412,6 +488,7 @@
 									iconDescription="Save"
 									kind="ghost"
 									size="small"
+									disabled={savingEdit}
 									on:click={saveEdit}
 								/>
 								<Button
@@ -419,6 +496,7 @@
 									iconDescription="Cancel"
 									kind="ghost"
 									size="small"
+									disabled={savingEdit}
 									on:click={cancelEdit}
 								/>
 							</div>
@@ -472,6 +550,7 @@
 										<button
 											class="file-share-btn"
 											title={m.share_file()}
+											aria-label="{m.share_file()}: {f.name}"
 											onclick={() => openShare(f.id)}
 										>
 											<Share size={16} />
@@ -479,8 +558,9 @@
 										{#if isOwn(msg)}
 											<button
 												class="file-remove-btn"
-												title="Remove file"
-												onclick={() => deleteFileFromMessage(f.id)}
+												title="Delete file"
+												aria-label="Delete file {f.name}"
+												onclick={() => askDeleteFile(f, msg)}
 											>
 												<Close size={16} />
 											</button>
@@ -510,7 +590,11 @@
 						{/if}
 						<span class="pending-name">{f.name}</span>
 						<span class="pending-size">{formatSize(f.size)}</span>
-						<button class="pending-remove" onclick={() => removePendingFile(i)}>
+						<button
+							class="pending-remove"
+							aria-label="Remove {f.name} from attachments"
+							onclick={() => removePendingFile(i)}
+						>
 							<Close size={16} />
 						</button>
 					</div>
@@ -558,7 +642,45 @@
 
 <ShareFileModal bind:open={showShareModal} fileId={shareFileId} />
 
+<ConfirmModal
+	bind:open={showDeleteMessage}
+	heading="Delete message"
+	confirmLabel="Delete"
+	onconfirm={deleteMessage}
+	successMessage="Message deleted"
+>
+	<p>Delete this message for everyone? This cannot be undone.</p>
+	{#if deleteMessageTarget?.files?.length}
+		<p class="confirm-note">
+			{deleteMessageTarget.files.length === 1
+				? 'The attached file will be permanently deleted too, and any share links to it will stop working.'
+				: `The ${deleteMessageTarget.files.length} attached files will be permanently deleted too, and any share links to them will stop working.`}
+		</p>
+	{/if}
+</ConfirmModal>
+
+<ConfirmModal
+	bind:open={showDeleteFile}
+	heading="Delete file"
+	confirmLabel="Delete"
+	onconfirm={deleteFileFromMessage}
+	successMessage={`"${deleteFileTarget?.file.name}" deleted`}
+>
+	<p>
+		Permanently delete <strong>{deleteFileTarget?.file.name}</strong>? It is removed from this
+		message and from the Files page, and any share links to it stop working.
+	</p>
+	{#if deleteFileTarget && !deleteFileTarget.message.content.trim() && deleteFileTarget.message.files?.length === 1}
+		<p class="confirm-note">The message will disappear as well, since it contains nothing else.</p>
+	{/if}
+</ConfirmModal>
+
 <style>
+	.confirm-note {
+		margin-top: var(--cds-spacing-04);
+		color: var(--cds-text-secondary);
+	}
+
 	.chat-container {
 		display: flex;
 		flex-direction: column;
@@ -701,7 +823,8 @@
 		transition: opacity 0.15s;
 	}
 
-	.message:hover .message-actions {
+	.message:hover .message-actions,
+	.message:focus-within .message-actions {
 		opacity: 1;
 	}
 
@@ -769,7 +892,8 @@
 		transition: opacity 0.15s;
 	}
 
-	.file-wrapper:hover .file-remove-btn {
+	.file-wrapper:hover .file-remove-btn,
+	.file-wrapper:focus-within .file-remove-btn {
 		opacity: 1;
 	}
 
@@ -814,7 +938,8 @@
 		color: #fff;
 	}
 
-	.file-wrapper:hover .file-share-btn {
+	.file-wrapper:hover .file-share-btn,
+	.file-wrapper:focus-within .file-share-btn {
 		opacity: 1;
 	}
 

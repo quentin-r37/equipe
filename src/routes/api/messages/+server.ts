@@ -5,7 +5,8 @@ import { message, file, channel, team, teamMember } from '$lib/server/db/schema'
 import { messageBus } from '$lib/server/messages';
 import type { ChatFile } from '$lib/server/messages';
 import { notificationBus } from '$lib/server/notifications';
-import { uploadFile, deleteFile as deleteStorageFile } from '$lib/server/seaweedfs';
+import { deleteFile as deleteStorageFile } from '$lib/server/seaweedfs';
+import { FileError, assertUploadAllowed, storeUploadedFile } from '$lib/server/files';
 import { eq, and, desc, gt } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -130,6 +131,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		.where(eq(team.id, ch.teamId))
 		.limit(1);
 
+	// Reject oversized/empty uploads before anything is written.
+	try {
+		for (const f of uploadedFiles) assertUploadAllowed(f);
+	} catch (err) {
+		if (err instanceof FileError) throw error(err.status, err.message);
+		throw err;
+	}
+
 	const [inserted] = await db
 		.insert(message)
 		.values({
@@ -141,33 +150,30 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		.returning();
 
 	const chatFiles: ChatFile[] = [];
-	for (const f of uploadedFiles) {
-		const fileId = crypto.randomUUID();
-		const storagePath = `equipe/${ch.teamId}/${fileId}/${f.name}`;
-		await uploadFile(storagePath, f, f.name);
-
-		const [fileRecord] = await db
-			.insert(file)
-			.values({
-				id: fileId,
+	try {
+		for (const f of uploadedFiles) {
+			const fileRecord = await storeUploadedFile({
 				teamId: ch.teamId,
 				channelId,
 				messageId: inserted.id,
 				userId: locals.user.id,
 				userName: locals.user.name,
-				name: f.name,
-				size: f.size,
-				mimeType: f.type || 'application/octet-stream',
-				storagePath
-			})
-			.returning();
-
-		chatFiles.push({
-			id: fileRecord.id,
-			name: fileRecord.name,
-			size: fileRecord.size,
-			mimeType: fileRecord.mimeType
-		});
+				upload: f
+			});
+			chatFiles.push({
+				id: fileRecord.id,
+				name: fileRecord.name,
+				size: fileRecord.size,
+				mimeType: fileRecord.mimeType
+			});
+		}
+	} catch (err) {
+		// Roll back: drop the blobs stored so far and the message, so no half-attached message survives.
+		const stored = await db.select().from(file).where(eq(file.messageId, inserted.id));
+		for (const f of stored) await deleteStorageFile(f.storagePath).catch(() => {});
+		await db.delete(message).where(eq(message.id, inserted.id));
+		console.error('Message attachment upload failed', err);
+		throw error(500, 'Upload failed. Please try again.');
 	}
 
 	const chatMessage = {

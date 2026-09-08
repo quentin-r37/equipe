@@ -19,6 +19,10 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 	const encoder = new TextEncoder();
 
+	// Held in the closure so cancel() can reach it: the cancel callback receives the
+	// cancellation reason, not the controller.
+	let cleanup: (() => void) | undefined;
+
 	const stream = new ReadableStream({
 		start(controller) {
 			controller.enqueue(encoder.encode(': connected\n\n'));
@@ -33,7 +37,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 						const payload = `event: notification\ndata: ${JSON.stringify(event)}\n\n`;
 						controller.enqueue(encoder.encode(payload));
 					} catch {
-						cleanup();
+						cleanup?.();
 					}
 				});
 				unsubscribes.push(unsub);
@@ -43,20 +47,17 @@ export const GET: RequestHandler = async ({ locals }) => {
 				try {
 					controller.enqueue(encoder.encode(': ping\n\n'));
 				} catch {
-					cleanup();
+					cleanup?.();
 				}
 			}, 30000);
 
-			function cleanup() {
+			cleanup = () => {
 				clearInterval(interval);
 				for (const unsub of unsubscribes) unsub();
-			}
-
-			(controller as unknown as { _cleanup: () => void })._cleanup = cleanup;
+			};
 		},
-		cancel(controller) {
-			const ctrl = controller as unknown as { _cleanup?: () => void };
-			ctrl._cleanup?.();
+		cancel() {
+			cleanup?.();
 		}
 	});
 
@@ -64,7 +65,9 @@ export const GET: RequestHandler = async ({ locals }) => {
 		headers: {
 			'Content-Type': 'text/event-stream',
 			'Cache-Control': 'no-cache',
-			Connection: 'keep-alive'
+			Connection: 'keep-alive',
+			// Prevent reverse proxies (nginx, Cloudflare) from buffering the event stream.
+			'X-Accel-Buffering': 'no'
 		}
 	});
 };

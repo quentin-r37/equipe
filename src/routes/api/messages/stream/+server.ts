@@ -28,6 +28,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 	const encoder = new TextEncoder();
 
+	// Held in the closure so cancel() can reach it: the cancel callback receives the
+	// cancellation reason, not the controller.
+	let cleanup: (() => void) | undefined;
+
 	const stream = new ReadableStream({
 		start(controller) {
 			controller.enqueue(encoder.encode(': connected\n\n'));
@@ -37,7 +41,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 					const payload = `event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`;
 					controller.enqueue(encoder.encode(payload));
 				} catch {
-					unsubscribe();
+					cleanup?.();
 				}
 			});
 
@@ -52,17 +56,13 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			}, 30000);
 
 			// Cleanup when client disconnects
-			const cleanup = () => {
+			cleanup = () => {
 				clearInterval(interval);
 				unsubscribe();
 			};
-
-			// Store cleanup for cancel
-			(controller as unknown as { _cleanup: () => void })._cleanup = cleanup;
 		},
-		cancel(controller) {
-			const ctrl = controller as unknown as { _cleanup?: () => void };
-			ctrl._cleanup?.();
+		cancel() {
+			cleanup?.();
 		}
 	});
 
@@ -70,7 +70,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		headers: {
 			'Content-Type': 'text/event-stream',
 			'Cache-Control': 'no-cache',
-			Connection: 'keep-alive'
+			Connection: 'keep-alive',
+			// Prevent reverse proxies (nginx, Cloudflare) from buffering the event stream.
+			'X-Accel-Buffering': 'no'
 		}
 	});
 };

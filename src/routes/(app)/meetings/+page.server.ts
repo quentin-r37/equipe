@@ -119,6 +119,6 @@ export const actions: Actions = {
 
 		await db.delete(meeting).where(eq(meeting.id, meetingId));
 
-		return { success: true };
+		return { success: true, action: 'delete' as const };
 	}
 };

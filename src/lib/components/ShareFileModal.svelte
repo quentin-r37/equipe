@@ -22,6 +22,10 @@
 	let creating = $state(false);
 	let errorMsg = $state('');
 	let copiedId = $state('');
+	let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+	// Link awaiting revoke confirmation (two-step inline confirm) and the one being revoked.
+	let confirmRevokeId = $state('');
+	let revokingId = $state('');
 
 	// Fetch the active links whenever the modal opens for a file. The state
 	// assignment lives in loadShares(), keeping this effect a pure side-effect.
@@ -49,6 +53,8 @@
 		duration = 'day';
 		errorMsg = '';
 		copiedId = '';
+		confirmRevokeId = '';
+		revokingId = '';
 	}
 
 	async function createLink() {
@@ -74,20 +80,32 @@
 
 	async function revoke(id: string) {
 		errorMsg = '';
+		revokingId = id;
 		try {
 			const res = await fetch(`/api/files/share?id=${id}`, { method: 'DELETE' });
 			if (!res.ok) throw new Error(String(res.status));
 			shares = shares.filter((s) => s.id !== id);
+			confirmRevokeId = '';
 			// Refresh the page load data so the file's "Shared (N)" badge updates.
 			await invalidateAll();
 		} catch {
 			errorMsg = m.share_error();
+		} finally {
+			revokingId = '';
 		}
 	}
 
 	async function copyLink(share: ShareDTO) {
-		await navigator.clipboard.writeText(share.url);
-		copiedId = share.id;
+		errorMsg = '';
+		try {
+			await navigator.clipboard.writeText(share.url);
+			copiedId = share.id;
+			clearTimeout(copiedTimer);
+			copiedTimer = setTimeout(() => (copiedId = ''), 2500);
+		} catch {
+			// Clipboard is unavailable (insecure origin, permission denied): let the user copy by hand.
+			errorMsg = m.share_error();
+		}
 	}
 
 	// Build the secondary metadata line shown under each link: expiry (or
@@ -136,25 +154,53 @@
 						<li class="link-item">
 							<div class="link-info">
 								<span class="link-url" title={s.url}>{s.url}</span>
-								<span class="link-meta">{metaLabel(s)}</span>
+								<span class="link-meta">
+									{#if copiedId === s.id}
+										<span class="link-copied">{m.share_link_copied()}</span>
+									{:else}
+										{metaLabel(s)}
+									{/if}
+								</span>
 							</div>
 							<div class="link-actions">
-								<Button
-									kind="ghost"
-									size="small"
-									icon={Copy}
-									tooltipPosition="top"
-									iconDescription={copiedId === s.id ? m.share_link_copied() : m.share_copy_link()}
-									on:click={() => copyLink(s)}
-								/>
-								<Button
-									kind="danger-ghost"
-									size="small"
-									icon={TrashCan}
-									tooltipPosition="top"
-									iconDescription={m.share_revoke()}
-									on:click={() => revoke(s.id)}
-								/>
+								{#if confirmRevokeId === s.id}
+									<span class="revoke-question">{m.share_revoke()}?</span>
+									<Button
+										kind="danger"
+										size="small"
+										disabled={revokingId === s.id}
+										on:click={() => revoke(s.id)}
+									>
+										{m.share_revoke()}
+									</Button>
+									<Button
+										kind="ghost"
+										size="small"
+										disabled={revokingId === s.id}
+										on:click={() => (confirmRevokeId = '')}
+									>
+										Cancel
+									</Button>
+								{:else}
+									<Button
+										kind="ghost"
+										size="small"
+										icon={Copy}
+										tooltipPosition="top"
+										iconDescription={copiedId === s.id
+											? m.share_link_copied()
+											: m.share_copy_link()}
+										on:click={() => copyLink(s)}
+									/>
+									<Button
+										kind="danger-ghost"
+										size="small"
+										icon={TrashCan}
+										tooltipPosition="top"
+										iconDescription={m.share_revoke()}
+										on:click={() => (confirmRevokeId = s.id)}
+									/>
+								{/if}
 							</div>
 						</li>
 					{/each}
@@ -220,7 +266,20 @@
 
 	.link-actions {
 		display: flex;
+		align-items: center;
+		gap: var(--cds-spacing-02);
 		flex-shrink: 0;
+	}
+
+	.revoke-question {
+		font-size: 0.75rem;
+		color: var(--cds-text-secondary);
+		margin-right: var(--cds-spacing-02);
+	}
+
+	.link-copied {
+		color: var(--cds-support-success);
+		font-weight: 600;
 	}
 
 	.share-create {

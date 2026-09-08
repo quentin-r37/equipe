@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Tile, Modal, Select, SelectItem, Tag } from 'carbon-components-svelte';
+	import {
+		Button,
+		Tile,
+		Modal,
+		Select,
+		SelectItem,
+		Tag,
+		InlineNotification
+	} from 'carbon-components-svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
 	import Download from 'carbon-icons-svelte/lib/Download.svelte';
 	import Share from 'carbon-icons-svelte/lib/Share.svelte';
@@ -17,6 +25,9 @@
 	import Code from 'carbon-icons-svelte/lib/Code.svelte';
 	import Document from 'carbon-icons-svelte/lib/Document.svelte';
 	import ShareFileModal from '$lib/components/ShareFileModal.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import { feedbackEnhance } from '$lib/forms';
+	import { formatSize, validateUpload, MAX_UPLOAD_BYTES } from '$lib/files';
 	import * as m from '$lib/paraglide/messages';
 	import type { PageServerData } from './$types';
 	import type { LayoutServerData } from '../$types';
@@ -24,7 +35,31 @@
 
 	let { data }: { data: PageServerData & LayoutServerData } = $props();
 
+	// ── Upload modal ──
 	let showUploadModal = $state(false);
+	let uploadPending = $state(false);
+	let uploadError = $state('');
+	let selectedFileName = $state('');
+
+	function openUpload() {
+		uploadError = '';
+		selectedFileName = '';
+		showUploadModal = true;
+	}
+
+	function onFileChosen(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const f = input.files?.[0];
+		selectedFileName = f?.name ?? '';
+		uploadError = f ? (validateUpload(f) ?? '') : '';
+	}
+
+	function submitUpload() {
+		if (uploadError) return;
+		(document.getElementById('upload-form') as HTMLFormElement | null)?.requestSubmit();
+	}
+
+	// ── Share ──
 	let showShareModal = $state(false);
 	let shareFileId = $state('');
 
@@ -33,10 +68,23 @@
 		showShareModal = true;
 	}
 
-	function formatSize(bytes: number): string {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / 1048576).toFixed(1)} MB`;
+	// ── Delete ──
+	let deleteTarget = $state<{
+		id: string;
+		name: string;
+		shareCount: number;
+		attached: boolean;
+	} | null>(null);
+	let showDeleteConfirm = $state(false);
+
+	function confirmDelete(f: {
+		id: string;
+		name: string;
+		shareCount: number;
+		messageId: string | null;
+	}) {
+		deleteTarget = { id: f.id, name: f.name, shareCount: f.shareCount, attached: !!f.messageId };
+		showDeleteConfirm = true;
 	}
 
 	function mimeIcon(mime: string): Component {
@@ -61,15 +109,14 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Files · Equipe</title>
+</svelte:head>
+
 <div class="page-header">
 	<h1>Files</h1>
 	{#if data.teams.length > 0}
-		<Button
-			class="btn--labeled"
-			icon={Add}
-			iconDescription="Upload file"
-			on:click={() => (showUploadModal = true)}>Upload File</Button
-		>
+		<Button icon={Add} on:click={openUpload}>Upload File</Button>
 	{/if}
 </div>
 
@@ -77,7 +124,14 @@
 	<Tile>
 		<div class="empty-state">
 			<DocumentMultiple01 size={32} />
-			<p>No files uploaded yet.</p>
+			{#if data.teams.length === 0}
+				<p>Join or create a team to start sharing files.</p>
+			{:else}
+				<p>No files uploaded yet.</p>
+				<Button size="small" kind="ghost" icon={Add} on:click={openUpload}
+					>Upload your first file</Button
+				>
+			{/if}
 		</div>
 	</Tile>
 {:else}
@@ -90,7 +144,7 @@
 						<span class="file-icon">
 							<Icon size={24} />
 						</span>
-						<div>
+						<div class="file-text">
 							<p class="file-name">
 								{f.name}
 								{#if f.shareCount > 0}
@@ -110,27 +164,24 @@
 							size="small"
 							kind="ghost"
 							icon={Share}
-							iconDescription={m.share_file()}
+							iconDescription="{m.share_file()}: {f.name}"
 							on:click={() => openShare(f.id)}
 						/>
 						<Button
 							size="small"
 							kind="ghost"
 							icon={Download}
-							iconDescription="Download"
+							iconDescription="Download {f.name}"
 							href="/api/files?id={f.id}"
 						/>
 						{#if f.userId === data.user.id}
-							<form method="post" action="?/delete" use:enhance>
-								<input type="hidden" name="fileId" value={f.id} />
-								<Button
-									size="small"
-									kind="danger-ghost"
-									icon={TrashCan}
-									iconDescription="Delete"
-									type="submit"
-								/>
-							</form>
+							<Button
+								size="small"
+								kind="danger-ghost"
+								icon={TrashCan}
+								iconDescription="Delete {f.name}"
+								on:click={() => confirmDelete(f)}
+							/>
 						{/if}
 					</div>
 				</div>
@@ -139,19 +190,35 @@
 	</div>
 {/if}
 
+<!-- Upload modal: stays open until the upload succeeds -->
 <Modal
 	bind:open={showUploadModal}
 	modalHeading="Upload File"
-	primaryButtonText="Upload"
+	primaryButtonText={uploadPending ? 'Uploading…' : 'Upload'}
+	primaryButtonDisabled={uploadPending || !!uploadError || !selectedFileName}
 	secondaryButtonText="Cancel"
+	shouldSubmitOnEnter={false}
+	preventCloseOnClickOutside={uploadPending}
 	on:click:button--secondary={() => (showUploadModal = false)}
-	on:submit={() => {
-		const form = document.getElementById('upload-form') as HTMLFormElement;
-		form?.requestSubmit();
-		showUploadModal = false;
-	}}
+	on:submit={submitUpload}
 >
-	<form id="upload-form" method="post" action="?/upload" enctype="multipart/form-data" use:enhance>
+	{#if uploadError}
+		<div class="modal-error">
+			<InlineNotification kind="error" title={uploadError} hideCloseButton lowContrast />
+		</div>
+	{/if}
+	<form
+		id="upload-form"
+		method="post"
+		action="?/upload"
+		enctype="multipart/form-data"
+		use:enhance={feedbackEnhance<{ name?: string }>({
+			pending: (v) => (uploadPending = v),
+			success: (d) => `"${d.name}" uploaded`,
+			onSuccess: () => (showUploadModal = false),
+			onError: (message) => (uploadError = message)
+		})}
+	>
 		<div class="form-field">
 			<Select name="teamId" labelText="Team">
 				{#each data.teams as t (t.id)}
@@ -161,10 +228,40 @@
 		</div>
 		<div class="file-input-field">
 			<label for="file-upload">File</label>
-			<input id="file-upload" type="file" name="file" required />
+			<input id="file-upload" type="file" name="file" required onchange={onFileChosen} />
+			<p class="file-hint">Maximum size: {formatSize(MAX_UPLOAD_BYTES)}</p>
 		</div>
 	</form>
+	{#if uploadPending}
+		<p class="upload-progress">Uploading {selectedFileName}… keep this window open.</p>
+	{/if}
 </Modal>
+
+<!-- Delete confirmation -->
+<ConfirmModal
+	bind:open={showDeleteConfirm}
+	heading="Delete file"
+	confirmLabel="Delete"
+	action="?/delete"
+	fields={{ fileId: deleteTarget?.id ?? '' }}
+	successMessage={`"${deleteTarget?.name}" deleted`}
+>
+	<p>
+		Permanently delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
+	</p>
+	<ul class="confirm-details">
+		{#if deleteTarget?.attached}
+			<li>It will also be removed from the chat message it was posted in.</li>
+		{/if}
+		{#if deleteTarget && deleteTarget.shareCount > 0}
+			<li>
+				{deleteTarget.shareCount === 1
+					? 'Its active share link will stop working.'
+					: `Its ${deleteTarget.shareCount} active share links will stop working.`}
+			</li>
+		{/if}
+	</ul>
+</ConfirmModal>
 
 <ShareFileModal bind:open={showShareModal} fileId={shareFileId} />
 
@@ -177,13 +274,16 @@
 	}
 
 	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--cds-spacing-04);
 		text-align: center;
 		padding: var(--cds-spacing-09) 0;
 		color: var(--cds-text-secondary);
 	}
 
 	.empty-state :global(svg) {
-		margin: 0 auto var(--cds-spacing-05);
 		color: var(--cds-icon-disabled);
 	}
 
@@ -197,12 +297,18 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+		gap: var(--cds-spacing-04);
 	}
 
 	.file-info {
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-04);
+		min-width: 0;
+	}
+
+	.file-text {
+		min-width: 0;
 	}
 
 	.file-icon {
@@ -213,6 +319,7 @@
 
 	.file-name {
 		font-weight: 500;
+		overflow-wrap: anywhere;
 	}
 
 	.file-meta {
@@ -224,9 +331,14 @@
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-03);
+		flex-shrink: 0;
 	}
 
 	.form-field {
+		margin-bottom: var(--cds-spacing-05);
+	}
+
+	.modal-error {
 		margin-bottom: var(--cds-spacing-05);
 	}
 
@@ -241,5 +353,29 @@
 		display: block;
 		width: 100%;
 		font-size: 0.875rem;
+	}
+
+	.file-hint,
+	.upload-progress {
+		font-size: 0.75rem;
+		color: var(--cds-text-secondary);
+		margin-top: var(--cds-spacing-03);
+	}
+
+	.confirm-details {
+		margin-top: var(--cds-spacing-04);
+		padding-left: var(--cds-spacing-05);
+		list-style: disc;
+		color: var(--cds-text-secondary);
+	}
+
+	.confirm-details li {
+		margin-bottom: var(--cds-spacing-02);
+	}
+
+	@media (max-width: 672px) {
+		.file-row {
+			flex-wrap: wrap;
+		}
 	}
 </style>

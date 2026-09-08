@@ -17,6 +17,7 @@
 	import ArrowLeft from 'carbon-icons-svelte/lib/ArrowLeft.svelte';
 	import UserFollow from 'carbon-icons-svelte/lib/UserFollow.svelte';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
+	import Logout from 'carbon-icons-svelte/lib/Logout.svelte';
 	import Edit from 'carbon-icons-svelte/lib/Edit.svelte';
 	import Checkmark from 'carbon-icons-svelte/lib/Checkmark.svelte';
 	import Close from 'carbon-icons-svelte/lib/Close.svelte';
@@ -24,22 +25,75 @@
 	import Chat from 'carbon-icons-svelte/lib/Chat.svelte';
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
 	import Email from 'carbon-icons-svelte/lib/Email.svelte';
-	import type { ActionData, PageData } from './$types';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import { feedbackEnhance } from '$lib/forms';
+	import type { PageData } from './$types';
 	import type { LayoutServerData } from '../../$types';
 
-	let { data, form }: { data: PageData & LayoutServerData; form: ActionData } = $props();
+	let { data }: { data: PageData & LayoutServerData } = $props();
 
-	let showAddMemberModal = $state(false);
+	// ── Description ──
 	let editingDescription = $state(false);
 	let descriptionValue = $state('');
+	let descriptionPending = $state(false);
 
-	// Remove member confirmation
-	let removeTarget = $state<{ id: string; name: string } | null>(null);
+	// ── Add member modal ──
+	let showAddMemberModal = $state(false);
+	let addMemberPending = $state(false);
+	let addMemberError = $state('');
+
+	function openAddMember() {
+		addMemberError = '';
+		showAddMemberModal = true;
+	}
+
+	// ── Remove / leave confirmation ──
+	let removeTarget = $state<{ id: string; name: string; isSelf: boolean } | null>(null);
 	let showRemoveConfirm = $state(false);
 
-	function confirmRemove(id: string, name: string) {
-		removeTarget = { id, name };
+	function confirmRemove(id: string, name: string, isSelf: boolean) {
+		removeTarget = { id, name, isSelf };
 		showRemoveConfirm = true;
+	}
+
+	// ── Role change confirmation ──
+	let roleTarget = $state<{
+		memberId: string;
+		name: string;
+		role: string;
+		previous: string;
+	} | null>(null);
+	let roleSelectEl: HTMLSelectElement | null = null;
+	let showRoleConfirm = $state(false);
+
+	function onRoleChange(e: Event, member: { id: string; userName: string; role: string }) {
+		const select = e.currentTarget as HTMLSelectElement;
+		if (select.value === member.role) return;
+		roleSelectEl = select;
+		roleTarget = {
+			memberId: member.id,
+			name: member.userName,
+			role: select.value,
+			previous: member.role
+		};
+		showRoleConfirm = true;
+	}
+
+	// Put the select back to the current role if the change is not confirmed.
+	$effect(() => {
+		if (!showRoleConfirm && roleTarget && roleSelectEl) {
+			roleSelectEl.value =
+				data.members.find((m) => m.id === roleTarget?.memberId)?.role ?? roleTarget.previous;
+		}
+	});
+
+	// ── Cancel invitation confirmation ──
+	let invitationTarget = $state<{ id: string; email: string } | null>(null);
+	let showInvitationConfirm = $state(false);
+
+	function confirmCancelInvitation(id: string, email: string) {
+		invitationTarget = { id, email };
+		showInvitationConfirm = true;
 	}
 
 	const isOwnerOrAdmin = $derived(
@@ -55,10 +109,16 @@
 	};
 </script>
 
+<svelte:head>
+	<title>{data.team.name} · Equipe</title>
+</svelte:head>
+
 <div class="page-header">
-	<Button kind="ghost" icon={ArrowLeft} iconDescription="Back" href="/" size="small" />
+	<Button kind="ghost" icon={ArrowLeft} iconDescription="Back to dashboard" href="/" size="small" />
 	<h1>{data.team.name}</h1>
-	<Tag type="high-contrast">{data.currentUserRole}</Tag>
+	<Tag type={roleLabel[data.currentUserRole]?.type ?? 'cool-gray'}>
+		{roleLabel[data.currentUserRole]?.text ?? data.currentUserRole}
+	</Tag>
 </div>
 
 <!-- Stats -->
@@ -105,7 +165,7 @@
 	<Row>
 		<Column sm={4} md={8} lg={10} padding>
 			<div class="section-header">
-				<h3>Description</h3>
+				<h2 class="section-title">Description</h2>
 				{#if isOwnerOrAdmin && !editingDescription}
 					<Button
 						size="small"
@@ -124,34 +184,29 @@
 					<form
 						method="post"
 						action="?/updateDescription"
-						use:enhance={() => {
-							return async ({ update }) => {
-								await update();
-								editingDescription = false;
-							};
-						}}
+						use:enhance={feedbackEnhance({
+							pending: (v) => (descriptionPending = v),
+							success: 'Description updated',
+							onSuccess: () => (editingDescription = false)
+						})}
 					>
 						<TextArea
 							name="description"
 							bind:value={descriptionValue}
-							labelText=""
+							labelText="Team description"
+							hideLabel
 							placeholder="Describe what this team is about..."
 							rows={3}
 						/>
 						<div class="edit-actions">
-							<Button
-								size="small"
-								type="submit"
-								class="btn--labeled"
-								icon={Checkmark}
-								iconDescription="Save description">Save</Button
-							>
+							<Button size="small" type="submit" icon={Checkmark} disabled={descriptionPending}>
+								{descriptionPending ? 'Saving…' : 'Save'}
+							</Button>
 							<Button
 								size="small"
 								kind="ghost"
-								class="btn--labeled"
 								icon={Close}
-								iconDescription="Cancel"
+								disabled={descriptionPending}
 								on:click={() => (editingDescription = false)}>Cancel</Button
 							>
 						</div>
@@ -168,46 +223,26 @@
 	</Row>
 </Grid>
 
-{#if form?.success}
-	<div class="notification">
-		<InlineNotification
-			kind="success"
-			title={form.invited ? 'Invitation sent' : 'Member added'}
-			subtitle={form.invited
-				? 'An invitation email has been sent.'
-				: 'The member has been added to the team.'}
-			hideCloseButton
-		/>
-	</div>
-{/if}
-
 <!-- Members -->
 <Grid fullWidth>
 	<Row>
 		<Column sm={4} md={8} lg={10} padding>
 			<div class="section-header">
-				<h3>Members</h3>
+				<h2 class="section-title">Members</h2>
 				{#if isOwnerOrAdmin}
-					<Button
-						size="small"
-						class="btn--labeled"
-						icon={UserFollow}
-						iconDescription="Add member"
-						on:click={() => (showAddMemberModal = true)}
-					>
-						Add Member
-					</Button>
+					<Button size="small" icon={UserFollow} on:click={openAddMember}>Add Member</Button>
 				{/if}
 			</div>
 
 			<div class="member-list">
 				{#each data.members as member (member.id)}
+					{@const isSelf = member.userId === data.user.id}
 					<Tile>
 						<div class="member-row">
 							<div class="member-info">
 								<p class="member-name">
 									{member.userName}
-									{#if member.userId === data.user.id}
+									{#if isSelf}
 										<Tag size="sm" type="blue">you</Tag>
 									{/if}
 								</p>
@@ -218,38 +253,29 @@
 							</div>
 							<div class="member-actions">
 								{#if isOwner && member.role !== 'owner'}
-									<form method="post" action="?/updateRole" use:enhance>
-										<input type="hidden" name="memberId" value={member.id} />
-										<Select
-											name="role"
-											labelText=""
-											hideLabel
-											size="sm"
-											selected={member.role}
-											on:change={(e) => {
-												const target = e.currentTarget as HTMLSelectElement;
-												target?.closest('form')?.requestSubmit();
-											}}
-										>
-											<SelectItem value="admin" text="Admin" />
-											<SelectItem value="member" text="Member" />
-										</Select>
-									</form>
+									<Select
+										labelText="Role for {member.userName}"
+										hideLabel
+										size="sm"
+										selected={member.role}
+										on:change={(e) => onRoleChange(e, member)}
+									>
+										<SelectItem value="admin" text="Admin" />
+										<SelectItem value="member" text="Member" />
+									</Select>
 								{:else}
 									<Tag size="sm" type={roleLabel[member.role]?.type ?? 'cool-gray'}>
 										{roleLabel[member.role]?.text ?? member.role}
 									</Tag>
 								{/if}
 
-								{#if member.role !== 'owner' && (isOwnerOrAdmin || member.userId === data.user.id)}
+								{#if member.role !== 'owner' && (isOwnerOrAdmin || isSelf)}
 									<Button
 										size="small"
 										kind="danger-ghost"
-										icon={TrashCan}
-										iconDescription={member.userId === data.user.id
-											? 'Leave team'
-											: 'Remove member'}
-										on:click={() => confirmRemove(member.id, member.userName)}
+										icon={isSelf ? Logout : TrashCan}
+										iconDescription={isSelf ? 'Leave team' : `Remove ${member.userName}`}
+										on:click={() => confirmRemove(member.id, member.userName, isSelf)}
 									/>
 								{/if}
 							</div>
@@ -267,7 +293,7 @@
 		<Row>
 			<Column sm={4} md={8} lg={10} padding>
 				<div class="section-header">
-					<h3>Pending Invitations</h3>
+					<h2 class="section-title">Pending Invitations</h2>
 				</div>
 				<div class="member-list">
 					{#each data.pendingInvitations as invitation (invitation.id)}
@@ -284,16 +310,13 @@
 								</div>
 								<div class="member-actions">
 									<Tag size="sm" type="cyan">Pending</Tag>
-									<form method="post" action="?/cancelInvitation" use:enhance>
-										<input type="hidden" name="invitationId" value={invitation.id} />
-										<Button
-											size="small"
-											kind="danger-ghost"
-											icon={TrashCan}
-											iconDescription="Cancel invitation"
-											type="submit"
-										/>
-									</form>
+									<Button
+										size="small"
+										kind="danger-ghost"
+										icon={TrashCan}
+										iconDescription="Cancel invitation for {invitation.email}"
+										on:click={() => confirmCancelInvitation(invitation.id, invitation.email)}
+									/>
 								</div>
 							</div>
 						</Tile>
@@ -304,58 +327,101 @@
 	</Grid>
 {/if}
 
-<!-- Remove member confirmation -->
-<Modal
+<!-- Remove member / leave team confirmation -->
+<ConfirmModal
 	bind:open={showRemoveConfirm}
-	danger
-	modalHeading="Remove Member"
-	primaryButtonText="Remove"
-	secondaryButtonText="Cancel"
-	on:click:button--secondary={() => (showRemoveConfirm = false)}
-	on:submit={() => {
-		if (removeTarget) {
-			const form = document.getElementById(`remove-member-${removeTarget.id}`) as HTMLFormElement;
-			form?.requestSubmit();
-		}
-		showRemoveConfirm = false;
-	}}
+	heading={removeTarget?.isSelf ? 'Leave team' : 'Remove member'}
+	confirmLabel={removeTarget?.isSelf ? 'Leave team' : 'Remove'}
+	action="?/removeMember"
+	fields={{ memberId: removeTarget?.id ?? '' }}
+	successMessage={removeTarget?.isSelf
+		? `You left ${data.team.name}`
+		: `${removeTarget?.name} removed from the team`}
+>
+	{#if removeTarget?.isSelf}
+		<p>
+			Are you sure you want to leave <strong>{data.team.name}</strong>? You will lose access to its
+			channels, files and meetings until an owner or admin adds you back.
+		</p>
+	{:else}
+		<p>
+			Are you sure you want to remove <strong>{removeTarget?.name}</strong> from the team? They will immediately
+			lose access to all channels, files and meetings.
+		</p>
+	{/if}
+</ConfirmModal>
+
+<!-- Role change confirmation -->
+<ConfirmModal
+	bind:open={showRoleConfirm}
+	heading="Change role"
+	confirmLabel="Change role"
+	danger={false}
+	action="?/updateRole"
+	fields={{ memberId: roleTarget?.memberId ?? '', role: roleTarget?.role ?? '' }}
+	successMessage={`${roleTarget?.name} is now ${roleLabel[roleTarget?.role ?? '']?.text.toLowerCase() ?? roleTarget?.role}`}
 >
 	<p>
-		Are you sure you want to remove <strong>{removeTarget?.name}</strong> from the team?
+		Make <strong>{roleTarget?.name}</strong> a
+		<strong>{roleLabel[roleTarget?.role ?? '']?.text.toLowerCase() ?? roleTarget?.role}</strong>?
+		{#if roleTarget?.role === 'admin'}
+			Admins can add and remove members, edit the description, and delete any channel.
+		{:else}
+			They will no longer be able to manage members or delete other people's channels.
+		{/if}
 	</p>
-</Modal>
+</ConfirmModal>
 
-<!-- Hidden remove forms -->
-{#each data.members as member (member.id)}
-	<form
-		id="remove-member-{member.id}"
-		method="post"
-		action="?/removeMember"
-		use:enhance
-		style="display:none"
-	>
-		<input type="hidden" name="memberId" value={member.id} />
-	</form>
-{/each}
+<!-- Cancel invitation confirmation -->
+<ConfirmModal
+	bind:open={showInvitationConfirm}
+	heading="Cancel invitation"
+	confirmLabel="Cancel invitation"
+	cancelLabel="Keep it"
+	action="?/cancelInvitation"
+	fields={{ invitationId: invitationTarget?.id ?? '' }}
+	successMessage={`Invitation for ${invitationTarget?.email} cancelled`}
+>
+	<p>
+		The invitation link sent to <strong>{invitationTarget?.email}</strong> will stop working. You can
+		invite them again later.
+	</p>
+</ConfirmModal>
 
 <!-- Add Member modal -->
 <Modal
 	bind:open={showAddMemberModal}
 	modalHeading="Add Member"
-	primaryButtonText="Add"
+	primaryButtonText={addMemberPending ? 'Adding…' : 'Add'}
+	primaryButtonDisabled={addMemberPending}
 	secondaryButtonText="Cancel"
+	shouldSubmitOnEnter={false}
 	on:click:button--secondary={() => (showAddMemberModal = false)}
-	on:submit={() => {
-		const form = document.getElementById('add-member-form') as HTMLFormElement;
-		form?.requestSubmit();
-		showAddMemberModal = false;
-	}}
+	on:submit={() =>
+		(document.getElementById('add-member-form') as HTMLFormElement | null)?.requestSubmit()}
 >
-	<form id="add-member-form" method="post" action="?/addMember" use:enhance>
+	{#if addMemberError}
+		<div class="modal-error">
+			<InlineNotification kind="error" title={addMemberError} hideCloseButton lowContrast />
+		</div>
+	{/if}
+	<form
+		id="add-member-form"
+		method="post"
+		action="?/addMember"
+		use:enhance={feedbackEnhance<{ invited?: boolean; email?: string }>({
+			pending: (v) => (addMemberPending = v),
+			success: (d) =>
+				d.invited ? `Invitation email sent to ${d.email}` : `${d.email} has been added to the team`,
+			onSuccess: () => (showAddMemberModal = false),
+			onError: (message) => (addMemberError = message)
+		})}
+	>
 		<TextInput
 			name="email"
 			labelText="User email"
 			placeholder="colleague@example.com"
+			helperText="Existing users are added right away. Anyone else receives an invitation email."
 			required
 			type="email"
 		/>
@@ -374,7 +440,7 @@
 		margin: 0;
 	}
 
-	.notification {
+	.modal-error {
 		margin-bottom: var(--cds-spacing-05);
 	}
 
@@ -411,8 +477,10 @@
 		margin-bottom: var(--cds-spacing-05);
 	}
 
-	.section-header h3 {
+	.section-title {
 		margin: 0;
+		font-size: 1.25rem;
+		font-weight: 400;
 	}
 
 	/* Description */
@@ -439,12 +507,15 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+		gap: var(--cds-spacing-04);
+		flex-wrap: wrap;
 	}
 
 	.member-info {
 		display: flex;
 		flex-direction: column;
 		gap: var(--cds-spacing-01);
+		min-width: 0;
 	}
 
 	.member-name {
@@ -459,6 +530,7 @@
 		font-size: 0.875rem;
 		color: var(--cds-text-secondary);
 		margin: 0;
+		overflow-wrap: anywhere;
 	}
 
 	.member-actions {

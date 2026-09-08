@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { enhance } from '$app/forms';
+	import { tick } from 'svelte';
 	import type { Snippet } from 'svelte';
 	import type { LayoutServerData } from './$types';
+	import { feedbackEnhance } from '$lib/forms';
 	import Chat from 'carbon-icons-svelte/lib/Chat.svelte';
 	import DocumentMultiple01 from 'carbon-icons-svelte/lib/DocumentMultiple_01.svelte';
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
@@ -16,6 +18,9 @@
 
 	let isEditing = $state(false);
 	let editName = $state('');
+	let renamePending = $state(false);
+	let renameError = $state('');
+	let renameInput: HTMLInputElement | undefined = $state();
 
 	const canRename = $derived(
 		data.channel.createdBy === data.membership.userId ||
@@ -23,13 +28,17 @@
 			data.membership.role === 'admin'
 	);
 
-	function startEditing() {
+	async function startEditing() {
 		editName = data.channel.name;
+		renameError = '';
 		isEditing = true;
+		await tick();
+		renameInput?.select();
 	}
 
 	function cancelEditing() {
 		isEditing = false;
+		renameError = '';
 		editName = data.channel.name;
 	}
 
@@ -47,12 +56,12 @@
 			<form
 				method="POST"
 				action="{basePath}?/renameChannel"
-				use:enhance={() => {
-					return async ({ update }) => {
-						isEditing = false;
-						await update();
-					};
-				}}
+				use:enhance={feedbackEnhance({
+					pending: (v) => (renamePending = v),
+					success: 'Channel renamed',
+					onSuccess: () => (isEditing = false),
+					onError: (message) => (renameError = message)
+				})}
 				class="rename-form"
 			>
 				<span class="hash">#</span>
@@ -60,19 +69,36 @@
 					type="text"
 					name="name"
 					bind:value={editName}
+					bind:this={renameInput}
 					class="rename-input"
-					autofocus
+					aria-label="Channel name"
+					aria-invalid={!!renameError}
+					disabled={renamePending}
 					onkeydown={(e) => {
 						if (e.key === 'Escape') cancelEditing();
 					}}
 				/>
-				<button type="submit" class="icon-btn" aria-label="Save" disabled={!editName.trim()}>
+				<button
+					type="submit"
+					class="icon-btn"
+					aria-label="Save"
+					disabled={!editName.trim() || renamePending}
+				>
 					<Checkmark size={16} />
 				</button>
-				<button type="button" class="icon-btn" aria-label="Cancel" onclick={cancelEditing}>
+				<button
+					type="button"
+					class="icon-btn"
+					aria-label="Cancel"
+					disabled={renamePending}
+					onclick={cancelEditing}
+				>
 					<Close size={16} />
 				</button>
 			</form>
+			{#if renameError}
+				<p class="rename-error" role="alert">{renameError}</p>
+			{/if}
 		{:else}
 			<div class="channel-title">
 				<h2># {data.channel.name}</h2>
@@ -88,16 +114,31 @@
 		{/if}
 	</div>
 
-	<nav class="tab-bar">
-		<a href={basePath} class="tab" class:active={isActive('')}>
+	<nav class="tab-bar" aria-label="Channel sections">
+		<a
+			href={basePath}
+			class="tab"
+			class:active={isActive('')}
+			aria-current={isActive('') ? 'page' : undefined}
+		>
 			<Chat size={16} />
 			Chat
 		</a>
-		<a href="{basePath}/files" class="tab" class:active={isActive('/files')}>
+		<a
+			href="{basePath}/files"
+			class="tab"
+			class:active={isActive('/files')}
+			aria-current={isActive('/files') ? 'page' : undefined}
+		>
 			<DocumentMultiple01 size={16} />
 			Files
 		</a>
-		<a href="{basePath}/meetings" class="tab" class:active={isActive('/meetings')}>
+		<a
+			href="{basePath}/meetings"
+			class="tab"
+			class:active={isActive('/meetings')}
+			aria-current={isActive('/meetings') ? 'page' : undefined}
+		>
 			<VideoChat size={16} />
 			Meetings
 		</a>
@@ -150,8 +191,15 @@
 		transition: opacity 0.15s;
 	}
 
-	.channel-title:hover .edit-btn {
+	.channel-title:hover .edit-btn,
+	.edit-btn:focus-visible {
 		opacity: 1;
+	}
+
+	.rename-error {
+		margin-top: var(--cds-spacing-02);
+		font-size: 0.75rem;
+		color: var(--cds-text-error);
 	}
 
 	.icon-btn {

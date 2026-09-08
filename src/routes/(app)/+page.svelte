@@ -11,7 +11,8 @@
 		Grid,
 		Row,
 		Column,
-		Tag
+		Tag,
+		InlineNotification
 	} from 'carbon-components-svelte';
 	import Add from 'carbon-icons-svelte/lib/Add.svelte';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
@@ -21,17 +22,27 @@
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
 	import DocumentMultiple01 from 'carbon-icons-svelte/lib/DocumentMultiple_01.svelte';
 	import ArrowRight from 'carbon-icons-svelte/lib/ArrowRight.svelte';
-	import type { PageServerData } from './$types';
-	import type { LayoutServerData } from './$types';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import { feedbackEnhance } from '$lib/forms';
+	import type { PageData } from './$types';
 
-	let { data }: { data: PageServerData & LayoutServerData } = $props();
+	let { data }: { data: PageData } = $props();
 
+	// ── Create / add modals: stay open until the server confirms success ──
 	let showTeamModal = $state(false);
+	let teamPending = $state(false);
+	let teamError = $state('');
+
 	let showChannelModal = $state(false);
+	let channelPending = $state(false);
+	let channelError = $state('');
+
 	let showAddMemberModal = $state(false);
 	let addMemberTeamId = $state('');
+	let memberPending = $state(false);
+	let memberError = $state('');
 
-	// Delete confirmation state
+	// ── Delete confirmation ──
 	let deleteTarget = $state<{ type: 'team' | 'channel'; id: string; name: string } | null>(null);
 	let showDeleteConfirm = $state(false);
 
@@ -42,8 +53,20 @@
 
 	function openAddMember(teamId: string) {
 		addMemberTeamId = teamId;
+		memberError = '';
 		showAddMemberModal = true;
 	}
+
+	function submitForm(id: string) {
+		(document.getElementById(id) as HTMLFormElement | null)?.requestSubmit();
+	}
+
+	// ── Permissions (mirrors the server checks so users only see actions they can perform) ──
+	const canDeleteTeam = (teamId: string) => data.roles[teamId] === 'owner';
+	const canManageMembers = (teamId: string) =>
+		data.roles[teamId] === 'owner' || data.roles[teamId] === 'admin';
+	const canDeleteChannel = (ch: { teamId: string; createdBy: string }) =>
+		ch.createdBy === data.user.id || canManageMembers(ch.teamId);
 
 	// Group channels by team
 	const channelsByTeam = $derived(
@@ -77,62 +100,68 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Dashboard · Equipe</title>
+</svelte:head>
+
 <div class="page-header">
-	<h1>Welcome, {data.user.name}</h1>
+	<h1>Welcome, {data.user.name || data.user.email}</h1>
 	<p class="subtitle">Your collaboration hub</p>
 </div>
 
-<!-- Stats overview -->
-<Grid fullWidth>
-	<Row>
-		<Column sm={2} md={2} lg={4} padding>
-			<Tile class="stat-tile">
-				<div class="stat">
-					<Group size={24} />
-					<div>
-						<span class="stat-value">{data.teams.length}</span>
-						<span class="stat-label">{data.teams.length === 1 ? 'Team' : 'Teams'}</span>
+{#if data.teams.length > 0}
+	<!-- Stats overview -->
+	<Grid fullWidth>
+		<Row>
+			<Column sm={2} md={2} lg={4} padding>
+				<Tile class="stat-tile">
+					<div class="stat">
+						<Group size={24} />
+						<div>
+							<span class="stat-value">{data.teams.length}</span>
+							<span class="stat-label">{data.teams.length === 1 ? 'Team' : 'Teams'}</span>
+						</div>
 					</div>
-				</div>
-			</Tile>
-		</Column>
-		<Column sm={2} md={2} lg={4} padding>
-			<Tile class="stat-tile">
-				<div class="stat">
-					<Chat size={24} />
-					<div>
-						<span class="stat-value">{data.channels.length}</span>
-						<span class="stat-label">{data.channels.length === 1 ? 'Channel' : 'Channels'}</span>
+				</Tile>
+			</Column>
+			<Column sm={2} md={2} lg={4} padding>
+				<Tile class="stat-tile">
+					<div class="stat">
+						<Chat size={24} />
+						<div>
+							<span class="stat-value">{data.channels.length}</span>
+							<span class="stat-label">{data.channels.length === 1 ? 'Channel' : 'Channels'}</span>
+						</div>
 					</div>
-				</div>
-			</Tile>
-		</Column>
-		<Column sm={2} md={2} lg={4} padding>
-			<Tile class="stat-tile">
-				<div class="stat">
-					<VideoChat size={24} />
-					<div>
-						<span class="stat-value">{data.activeMeetings.length}</span>
-						<span class="stat-label"
-							>Active {data.activeMeetings.length === 1 ? 'Meeting' : 'Meetings'}</span
-						>
+				</Tile>
+			</Column>
+			<Column sm={2} md={2} lg={4} padding>
+				<Tile class="stat-tile">
+					<div class="stat">
+						<VideoChat size={24} />
+						<div>
+							<span class="stat-value">{data.activeMeetings.length}</span>
+							<span class="stat-label"
+								>Active {data.activeMeetings.length === 1 ? 'Meeting' : 'Meetings'}</span
+							>
+						</div>
 					</div>
-				</div>
-			</Tile>
-		</Column>
-		<Column sm={2} md={2} lg={4} padding>
-			<Tile class="stat-tile">
-				<div class="stat">
-					<DocumentMultiple01 size={24} />
-					<div>
-						<span class="stat-value">{data.fileCount}</span>
-						<span class="stat-label">{data.fileCount === 1 ? 'File' : 'Files'}</span>
+				</Tile>
+			</Column>
+			<Column sm={2} md={2} lg={4} padding>
+				<Tile class="stat-tile">
+					<div class="stat">
+						<DocumentMultiple01 size={24} />
+						<div>
+							<span class="stat-value">{data.fileCount}</span>
+							<span class="stat-label">{data.fileCount === 1 ? 'File' : 'Files'}</span>
+						</div>
 					</div>
-				</div>
-			</Tile>
-		</Column>
-	</Row>
-</Grid>
+				</Tile>
+			</Column>
+		</Row>
+	</Grid>
+{/if}
 
 <!-- Main content -->
 <Grid fullWidth>
@@ -140,26 +169,28 @@
 		<!-- Teams & Channels -->
 		<Column sm={4} md={8} lg={10} padding>
 			<div class="section-header">
-				<h3>Teams & Channels</h3>
+				<h2 class="section-title">Teams & Channels</h2>
 				<div class="section-actions">
 					{#if data.teams.length > 0}
 						<Button
 							size="small"
 							kind="ghost"
-							class="btn--labeled"
 							icon={Add}
-							iconDescription="Add channel"
-							on:click={() => (showChannelModal = true)}
+							on:click={() => {
+								channelError = '';
+								showChannelModal = true;
+							}}
 						>
 							Channel
 						</Button>
 					{/if}
 					<Button
 						size="small"
-						class="btn--labeled"
 						icon={Add}
-						iconDescription="Create team"
-						on:click={() => (showTeamModal = true)}>Team</Button
+						on:click={() => {
+							teamError = '';
+							showTeamModal = true;
+						}}>Team</Button
 					>
 				</div>
 			</div>
@@ -168,13 +199,14 @@
 				<Tile>
 					<div class="empty-state">
 						<Group size={32} />
-						<h4>No teams yet</h4>
+						<h3>No teams yet</h3>
 						<p>Create your first team to start collaborating with your colleagues.</p>
 						<Button
-							class="btn--labeled"
 							icon={Add}
-							iconDescription="Create team"
-							on:click={() => (showTeamModal = true)}>Create Team</Button
+							on:click={() => {
+								teamError = '';
+								showTeamModal = true;
+							}}>Create Team</Button
 						>
 					</div>
 				</Tile>
@@ -184,7 +216,7 @@
 						<Tile class="team-card">
 							<div class="team-header">
 								<div class="team-info">
-									<h4 class="team-name"><a href="/teams/{t.id}">{t.name}</a></h4>
+									<h3 class="team-name"><a href="/teams/{t.id}">{t.name}</a></h3>
 									<div class="team-meta">
 										<Tag size="sm" type="cool-gray">
 											{t.memberCount}
@@ -197,20 +229,24 @@
 									</div>
 								</div>
 								<div class="team-actions">
-									<Button
-										size="small"
-										kind="ghost"
-										icon={UserFollow}
-										iconDescription="Add member"
-										on:click={() => openAddMember(t.id)}
-									/>
-									<Button
-										size="small"
-										kind="danger-ghost"
-										icon={TrashCan}
-										iconDescription="Delete team"
-										on:click={() => confirmDelete('team', t.id, t.name)}
-									/>
+									{#if canManageMembers(t.id)}
+										<Button
+											size="small"
+											kind="ghost"
+											icon={UserFollow}
+											iconDescription="Add member to {t.name}"
+											on:click={() => openAddMember(t.id)}
+										/>
+									{/if}
+									{#if canDeleteTeam(t.id)}
+										<Button
+											size="small"
+											kind="danger-ghost"
+											icon={TrashCan}
+											iconDescription="Delete team {t.name}"
+											on:click={() => confirmDelete('team', t.id, t.name)}
+										/>
+									{/if}
 								</div>
 							</div>
 							{#if t.description}
@@ -223,13 +259,15 @@
 											<span class="channel-hash">#</span>
 											{ch.name}
 										</a>
-										<Button
-											size="small"
-											kind="ghost"
-											icon={TrashCan}
-											iconDescription="Delete channel"
-											on:click={() => confirmDelete('channel', ch.id, ch.name)}
-										/>
+										{#if canDeleteChannel(ch)}
+											<Button
+												size="small"
+												kind="ghost"
+												icon={TrashCan}
+												iconDescription="Delete channel #{ch.name}"
+												on:click={() => confirmDelete('channel', ch.id, ch.name)}
+											/>
+										{/if}
 									</div>
 								{/each}
 								{#if t.channels.length === 0}
@@ -246,14 +284,10 @@
 		<Column sm={4} md={8} lg={6} padding>
 			<!-- Active Meetings -->
 			<div class="section-header">
-				<h3>Active Meetings</h3>
-				<Button
-					size="small"
-					class="btn--labeled"
-					icon={Add}
-					iconDescription="New meeting"
-					href="/meetings">New</Button
-				>
+				<h2 class="section-title">Active Meetings</h2>
+				{#if data.teams.length > 0}
+					<Button size="small" icon={Add} href="/meetings">New</Button>
+				{/if}
 			</div>
 
 			{#if data.activeMeetings.length === 0}
@@ -261,14 +295,7 @@
 					<div class="empty-state-small">
 						<VideoChat size={32} />
 						<p>No active meetings right now.</p>
-						<Button
-							size="small"
-							kind="ghost"
-							class="btn--labeled"
-							icon={ArrowRight}
-							iconDescription="Go to meetings"
-							href="/meetings"
-						>
+						<Button size="small" kind="ghost" icon={ArrowRight} href="/meetings">
 							Go to Meetings
 						</Button>
 					</div>
@@ -292,7 +319,7 @@
 			<!-- Recent Activity -->
 			{#if data.recentMessages.length > 0}
 				<div class="section-header" style="margin-top: var(--cds-spacing-07);">
-					<h3>Recent Activity</h3>
+					<h2 class="section-title">Recent Activity</h2>
 				</div>
 				<Tile>
 					<ul class="activity-list">
@@ -315,72 +342,57 @@
 	</Row>
 </Grid>
 
-<!-- Delete confirmation modal -->
-<Modal
+<!-- Delete confirmation -->
+<ConfirmModal
 	bind:open={showDeleteConfirm}
-	danger
-	modalHeading="Delete {deleteTarget?.type === 'team' ? 'Team' : 'Channel'}"
-	primaryButtonText="Delete"
-	secondaryButtonText="Cancel"
-	on:click:button--secondary={() => (showDeleteConfirm = false)}
-	on:submit={() => {
-		if (deleteTarget) {
-			const form = document.getElementById(
-				`delete-${deleteTarget.type}-${deleteTarget.id}`
-			) as HTMLFormElement;
-			form?.requestSubmit();
-		}
-		showDeleteConfirm = false;
-	}}
+	heading={deleteTarget?.type === 'team' ? 'Delete team' : 'Delete channel'}
+	confirmLabel="Delete"
+	action={deleteTarget?.type === 'team' ? '?/deleteTeam' : '?/deleteChannel'}
+	fields={deleteTarget?.type === 'team'
+		? { teamId: deleteTarget.id }
+		: { channelId: deleteTarget?.id ?? '' }}
+	successMessage={deleteTarget?.type === 'team'
+		? `Team "${deleteTarget.name}" deleted`
+		: `Channel #${deleteTarget?.name} deleted`}
 >
 	<p>
 		Are you sure you want to delete <strong>{deleteTarget?.name}</strong>?
 		{#if deleteTarget?.type === 'team'}
-			This will permanently delete all channels, messages, meetings, and files in this team.
+			This will permanently delete all channels, messages, meetings, files and share links in this
+			team. This cannot be undone.
 		{:else}
-			This will permanently delete all messages in this channel.
+			This will permanently delete all messages and files in this channel. This cannot be undone.
 		{/if}
 	</p>
-</Modal>
-
-<!-- Hidden delete forms -->
-{#each data.teams as t (t.id)}
-	<form
-		id="delete-team-{t.id}"
-		method="post"
-		action="?/deleteTeam"
-		use:enhance
-		style="display:none"
-	>
-		<input type="hidden" name="teamId" value={t.id} />
-	</form>
-{/each}
-{#each data.channels as ch (ch.id)}
-	<form
-		id="delete-channel-{ch.id}"
-		method="post"
-		action="?/deleteChannel"
-		use:enhance
-		style="display:none"
-	>
-		<input type="hidden" name="channelId" value={ch.id} />
-	</form>
-{/each}
+</ConfirmModal>
 
 <!-- Create Team modal -->
 <Modal
 	bind:open={showTeamModal}
 	modalHeading="Create Team"
-	primaryButtonText="Create"
+	primaryButtonText={teamPending ? 'Creating…' : 'Create'}
+	primaryButtonDisabled={teamPending}
 	secondaryButtonText="Cancel"
+	shouldSubmitOnEnter={false}
 	on:click:button--secondary={() => (showTeamModal = false)}
-	on:submit={() => {
-		const form = document.getElementById('create-team-form') as HTMLFormElement;
-		form?.requestSubmit();
-		showTeamModal = false;
-	}}
+	on:submit={() => submitForm('create-team-form')}
 >
-	<form id="create-team-form" method="post" action="?/createTeam" use:enhance>
+	{#if teamError}
+		<div class="modal-error">
+			<InlineNotification kind="error" title={teamError} hideCloseButton lowContrast />
+		</div>
+	{/if}
+	<form
+		id="create-team-form"
+		method="post"
+		action="?/createTeam"
+		use:enhance={feedbackEnhance({
+			pending: (v) => (teamPending = v),
+			success: 'Team created. Welcome to #general!',
+			onSuccess: () => (showTeamModal = false),
+			onError: (message) => (teamError = message)
+		})}
+	>
 		<div class="form-field">
 			<TextInput name="name" labelText="Team name" placeholder="e.g., Engineering" required />
 		</div>
@@ -392,16 +404,29 @@
 <Modal
 	bind:open={showChannelModal}
 	modalHeading="Create Channel"
-	primaryButtonText="Create"
+	primaryButtonText={channelPending ? 'Creating…' : 'Create'}
+	primaryButtonDisabled={channelPending}
 	secondaryButtonText="Cancel"
+	shouldSubmitOnEnter={false}
 	on:click:button--secondary={() => (showChannelModal = false)}
-	on:submit={() => {
-		const form = document.getElementById('create-channel-form') as HTMLFormElement;
-		form?.requestSubmit();
-		showChannelModal = false;
-	}}
+	on:submit={() => submitForm('create-channel-form')}
 >
-	<form id="create-channel-form" method="post" action="?/createChannel" use:enhance>
+	{#if channelError}
+		<div class="modal-error">
+			<InlineNotification kind="error" title={channelError} hideCloseButton lowContrast />
+		</div>
+	{/if}
+	<form
+		id="create-channel-form"
+		method="post"
+		action="?/createChannel"
+		use:enhance={feedbackEnhance({
+			pending: (v) => (channelPending = v),
+			success: 'Channel created',
+			onSuccess: () => (showChannelModal = false),
+			onError: (message) => (channelError = message)
+		})}
+	>
 		<div class="form-field">
 			<Select name="teamId" labelText="Team">
 				{#each data.teams as t (t.id)}
@@ -417,21 +442,35 @@
 <Modal
 	bind:open={showAddMemberModal}
 	modalHeading="Add Member"
-	primaryButtonText="Add"
+	primaryButtonText={memberPending ? 'Adding…' : 'Add'}
+	primaryButtonDisabled={memberPending}
 	secondaryButtonText="Cancel"
+	shouldSubmitOnEnter={false}
 	on:click:button--secondary={() => (showAddMemberModal = false)}
-	on:submit={() => {
-		const form = document.getElementById('add-member-form') as HTMLFormElement;
-		form?.requestSubmit();
-		showAddMemberModal = false;
-	}}
+	on:submit={() => submitForm('add-member-form')}
 >
-	<form id="add-member-form" method="post" action="?/addMember" use:enhance>
+	{#if memberError}
+		<div class="modal-error">
+			<InlineNotification kind="error" title={memberError} hideCloseButton lowContrast />
+		</div>
+	{/if}
+	<form
+		id="add-member-form"
+		method="post"
+		action="?/addMember"
+		use:enhance={feedbackEnhance({
+			pending: (v) => (memberPending = v),
+			success: 'Member added to the team',
+			onSuccess: () => (showAddMemberModal = false),
+			onError: (message) => (memberError = message)
+		})}
+	>
 		<input type="hidden" name="teamId" value={addMemberTeamId} />
 		<TextInput
 			name="email"
 			labelText="User email"
 			placeholder="colleague@example.com"
+			helperText="The person must already have an Equipe account. To invite someone new, use the team settings page."
 			required
 			type="email"
 		/>
@@ -484,8 +523,10 @@
 		gap: var(--cds-spacing-03);
 	}
 
-	.section-header h3 {
+	.section-title {
 		margin: 0;
+		font-size: 1.25rem;
+		font-weight: 400;
 	}
 
 	.section-actions {
@@ -600,7 +641,7 @@
 		color: var(--cds-text-secondary);
 	}
 
-	.empty-state h4 {
+	.empty-state h3 {
 		color: var(--cds-text-primary, #161616);
 		margin: 0;
 	}
@@ -727,6 +768,10 @@
 
 	/* Forms */
 	.form-field {
+		margin-bottom: var(--cds-spacing-05);
+	}
+
+	.modal-error {
 		margin-bottom: var(--cds-spacing-05);
 	}
 </style>

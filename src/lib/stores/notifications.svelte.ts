@@ -1,6 +1,7 @@
 import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
 import type { NotificationType } from '$lib/server/notifications';
+import * as m from '$lib/paraglide/messages';
 
 export interface AppNotification {
 	id: string;
@@ -17,9 +18,26 @@ export interface AppNotification {
 }
 
 const DISMISS_TIMEOUT = 8000;
+const TOAST_TIMEOUT: Record<ToastKind, number> = {
+	success: 5000,
+	info: 6000,
+	warning: 8000,
+	error: 10000
+};
+
+export type ToastKind = 'success' | 'error' | 'info' | 'warning';
+
+/** A local feedback toast (result of a user action), as opposed to a real-time notification. */
+export interface LocalToast {
+	id: string;
+	kind: ToastKind;
+	title: string;
+	subtitle?: string;
+}
 
 class NotificationState {
 	notifications: AppNotification[] = $state([]);
+	toasts: LocalToast[] = $state([]);
 	permissionState: NotificationPermission = $state(
 		browser && 'Notification' in window ? Notification.permission : 'default'
 	);
@@ -50,9 +68,31 @@ class NotificationState {
 		}
 	}
 
+	/** Show a transient feedback toast for a local action (success, error…). */
+	toast(kind: ToastKind, title: string, subtitle?: string) {
+		const id = crypto.randomUUID();
+		this.toasts = [...this.toasts, { id, kind, title, subtitle }];
+		const timer = setTimeout(() => this.dismissToast(id), TOAST_TIMEOUT[kind]);
+		this.timers.set(id, timer);
+	}
+
+	dismissToast(id: string) {
+		this.toasts = this.toasts.filter((t) => t.id !== id);
+		const timer = this.timers.get(id);
+		if (timer) {
+			clearTimeout(timer);
+			this.timers.delete(id);
+		}
+	}
+
 	clearAll() {
-		for (const timer of this.timers.values()) clearTimeout(timer);
-		this.timers.clear();
+		for (const n of this.notifications) {
+			const timer = this.timers.get(n.id);
+			if (timer) {
+				clearTimeout(timer);
+				this.timers.delete(n.id);
+			}
+		}
 		this.notifications = [];
 	}
 
@@ -134,11 +174,20 @@ class NotificationState {
 	private buildBrowserTitle(notification: AppNotification): string {
 		switch (notification.type) {
 			case 'new_message':
-				return `${notification.userName} dans #${notification.channelName}`;
+				return m.notification_new_message({
+					userName: notification.userName,
+					channelName: notification.channelName ?? ''
+				});
 			case 'new_file':
-				return `${notification.userName} a partagé un fichier dans #${notification.channelName}`;
+				return m.notification_new_file({
+					userName: notification.userName,
+					channelName: notification.channelName ?? ''
+				});
 			case 'new_meeting':
-				return `${notification.userName} a démarré une réunion`;
+				return m.notification_new_meeting({
+					userName: notification.userName,
+					meetingTitle: notification.meetingTitle ?? ''
+				});
 		}
 	}
 }

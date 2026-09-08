@@ -1,7 +1,8 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { channel, meeting } from '$lib/server/db/schema';
+import { channel, meeting, team } from '$lib/server/db/schema';
+import { notificationBus } from '$lib/server/notifications';
 import { eq, desc } from 'drizzle-orm';
 
 export const load: PageServerLoad = async (event) => {
@@ -59,7 +60,26 @@ export const actions: Actions = {
 			})
 			.returning();
 
-		throw redirect(302, `/meetings/${newMeeting.id}`);
+		const [teamRow] = await db
+			.select({ name: team.name })
+			.from(team)
+			.where(eq(team.id, ch.teamId))
+			.limit(1);
+
+		notificationBus.publish(ch.teamId, {
+			id: crypto.randomUUID(),
+			type: 'new_meeting',
+			teamId: ch.teamId,
+			teamName: teamRow?.name ?? '',
+			meetingId: newMeeting.id,
+			meetingTitle: title,
+			userId: event.locals.user.id,
+			userName: event.locals.user.name,
+			preview: title,
+			createdAt: newMeeting.createdAt.toISOString()
+		});
+
+		throw redirect(303, `/meetings/${newMeeting.id}`);
 	},
 	delete: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
@@ -76,6 +96,6 @@ export const actions: Actions = {
 
 		await db.delete(meeting).where(eq(meeting.id, meetingId));
 
-		return { success: true };
+		return { success: true, action: 'delete' as const };
 	}
 };

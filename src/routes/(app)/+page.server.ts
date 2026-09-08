@@ -21,7 +21,7 @@ export const load: PageServerLoad = async (event) => {
 	const activeMeetings = await db.select().from(meeting).where(eq(meeting.status, 'active'));
 
 	// Member counts per team
-	let memberCounts: Record<string, number> = {};
+	const memberCounts: Record<string, number> = {};
 	if (teamIds.length > 0) {
 		const counts = await db
 			.select({ teamId: teamMember.teamId, count: count() })
@@ -103,14 +103,18 @@ export const actions: Actions = {
 		});
 
 		// Create a default "general" channel
-		await db.insert(channel).values({
-			teamId: newTeam.id,
-			name: 'general',
-			description: 'General discussion',
-			createdBy: event.locals.user.id
-		});
+		const [general] = await db
+			.insert(channel)
+			.values({
+				teamId: newTeam.id,
+				name: 'general',
+				description: 'General discussion',
+				createdBy: event.locals.user.id
+			})
+			.returning();
 
-		return { success: true };
+		// Land the user in the new channel instead of leaving them on the dashboard.
+		throw redirect(303, `/channels/${general.id}`);
 	},
 	createChannel: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
@@ -130,13 +134,16 @@ export const actions: Actions = {
 
 		if (!membership) return fail(403, { message: 'Not a team member' });
 
-		await db.insert(channel).values({
-			teamId,
-			name,
-			createdBy: event.locals.user.id
-		});
+		const [created] = await db
+			.insert(channel)
+			.values({
+				teamId,
+				name,
+				createdBy: event.locals.user.id
+			})
+			.returning();
 
-		return { success: true };
+		throw redirect(303, `/channels/${created.id}`);
 	},
 	deleteTeam: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
@@ -163,13 +170,18 @@ export const actions: Actions = {
 
 		// Delete associated files from SeaweedFS before cascade removes DB records
 		const teamFiles = await db.select().from(file).where(eq(file.teamId, teamId));
-		for (const f of teamFiles) {
-			await deleteFile(f.storagePath);
+		try {
+			for (const f of teamFiles) {
+				await deleteFile(f.storagePath);
+			}
+		} catch (err) {
+			console.error('Failed to delete team files from storage', err);
+			return fail(500, { message: 'Could not delete the team files. Please try again.' });
 		}
 
 		await db.delete(team).where(eq(team.id, teamId));
 
-		return { success: true };
+		return { success: true, action: 'deleteTeam' as const };
 	},
 	deleteChannel: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
@@ -201,7 +213,7 @@ export const actions: Actions = {
 
 		await db.delete(channel).where(eq(channel.id, channelId));
 
-		return { success: true };
+		return { success: true, action: 'deleteChannel' as const };
 	},
 	addMember: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
@@ -210,7 +222,7 @@ export const actions: Actions = {
 		const teamId = formData.get('teamId')?.toString() ?? '';
 		const email = formData.get('email')?.toString()?.trim().toLowerCase() ?? '';
 
-		if (!teamId || !email) return fail(400, { addMemberError: 'Team and email are required' });
+		if (!teamId || !email) return fail(400, { message: 'Team and email are required' });
 
 		// Verify the current user is owner or admin of the team
 		const [membership] = await db
@@ -220,7 +232,7 @@ export const actions: Actions = {
 			.limit(1);
 
 		if (!membership || membership.role === 'member') {
-			return fail(403, { addMemberError: 'Only team owners and admins can add members' });
+			return fail(403, { message: 'Only team owners and admins can add members' });
 		}
 
 		// Find user by email
@@ -231,7 +243,7 @@ export const actions: Actions = {
 			.limit(1);
 
 		if (!targetUser) {
-			return fail(404, { addMemberError: 'No user found with this email' });
+			return fail(404, { message: 'No user found with this email' });
 		}
 
 		// Check if already a member
@@ -242,7 +254,7 @@ export const actions: Actions = {
 			.limit(1);
 
 		if (existing) {
-			return fail(409, { addMemberError: 'This user is already a member of the team' });
+			return fail(409, { message: 'This user is already a member of the team' });
 		}
 
 		await db.insert(teamMember).values({
@@ -251,6 +263,6 @@ export const actions: Actions = {
 			role: 'member'
 		});
 
-		return { success: true };
+		return { success: true, action: 'addMember' as const };
 	}
 };

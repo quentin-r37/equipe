@@ -3,8 +3,8 @@ import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { file, teamMember } from '$lib/server/db/schema';
 import { eq, desc, and, inArray } from 'drizzle-orm';
-import { uploadFile, deleteFile } from '$lib/server/seaweedfs';
 import { countActiveSharesByFile } from '$lib/server/fileShare';
+import { FileError, storeUploadedFile, deleteFileWithCleanup } from '$lib/server/files';
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) throw redirect(302, '/login');
@@ -48,7 +48,7 @@ export const actions: Actions = {
 		const teamId = formData.get('teamId')?.toString() ?? '';
 		const uploadedFile = formData.get('file') as File | null;
 
-		if (!teamId) return fail(400, { message: 'Team is required' });
+		if (!teamId) return fail(400, { message: 'Please choose a team' });
 		if (!uploadedFile || uploadedFile.size === 0) return fail(400, { message: 'No file selected' });
 
 		// Verify membership
@@ -58,27 +58,22 @@ export const actions: Actions = {
 			.where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, event.locals.user.id)))
 			.limit(1);
 
-		if (!membership) return fail(403, { message: 'Not a team member' });
+		if (!membership) return fail(403, { message: 'You are not a member of this team' });
 
-		const fileId = crypto.randomUUID();
-		const storagePath = `equipe/${teamId}/${fileId}/${uploadedFile.name}`;
+		try {
+			await storeUploadedFile({
+				teamId,
+				userId: event.locals.user.id,
+				userName: event.locals.user.name,
+				upload: uploadedFile
+			});
+		} catch (err) {
+			if (err instanceof FileError) return fail(err.status, { message: err.message });
+			console.error('File upload failed', err);
+			return fail(500, { message: 'Upload failed. Please try again.' });
+		}
 
-		// Upload to SeaweedFS
-		await uploadFile(storagePath, uploadedFile, uploadedFile.name);
-
-		// Store metadata in DB
-		await db.insert(file).values({
-			id: fileId,
-			teamId,
-			userId: event.locals.user.id,
-			userName: event.locals.user.name,
-			name: uploadedFile.name,
-			size: uploadedFile.size,
-			mimeType: uploadedFile.type || 'application/octet-stream',
-			storagePath
-		});
-
-		return { success: true };
+		return { success: true, action: 'upload' as const, name: uploadedFile.name };
 	},
 	delete: async (event) => {
 		if (!event.locals.user) throw redirect(302, '/login');
@@ -86,17 +81,14 @@ export const actions: Actions = {
 		const formData = await event.request.formData();
 		const fileId = formData.get('fileId')?.toString() ?? '';
 
-		const [fileRecord] = await db.select().from(file).where(eq(file.id, fileId)).limit(1);
-		if (!fileRecord) return fail(404, { message: 'File not found' });
-
-		// Only file owner can delete
-		if (fileRecord.userId !== event.locals.user.id) {
-			return fail(403, { message: 'Only the file owner can delete' });
+		try {
+			const result = await deleteFileWithCleanup(fileId, event.locals.user.id);
+			if (!result.ok) return fail(result.status, { message: result.message });
+		} catch (err) {
+			console.error('File delete failed', err);
+			return fail(500, { message: 'Could not delete the file. Please try again.' });
 		}
 
-		await deleteFile(fileRecord.storagePath);
-		await db.delete(file).where(eq(file.id, fileId));
-
-		return { success: true };
+		return { success: true, action: 'delete' as const };
 	}
 };
