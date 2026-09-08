@@ -176,6 +176,8 @@
 							size="small"
 							kind="ghost"
 							icon={Add}
+							class="btn--labeled"
+							iconDescription="Add channel"
 							on:click={() => {
 								channelError = '';
 								showChannelModal = true;
@@ -187,6 +189,8 @@
 					<Button
 						size="small"
 						icon={Add}
+						class="btn--labeled"
+						iconDescription="Create team"
 						on:click={() => {
 							teamError = '';
 							showTeamModal = true;
@@ -203,6 +207,8 @@
 						<p>Create your first team to start collaborating with your colleagues.</p>
 						<Button
 							icon={Add}
+							class="btn--labeled"
+							iconDescription="Create team"
 							on:click={() => {
 								teamError = '';
 								showTeamModal = true;
@@ -286,7 +292,13 @@
 			<div class="section-header">
 				<h2 class="section-title">Active Meetings</h2>
 				{#if data.teams.length > 0}
-					<Button size="small" icon={Add} href="/meetings">New</Button>
+					<Button
+						size="small"
+						icon={Add}
+						class="btn--labeled"
+						iconDescription="New meeting"
+						href="/meetings">New</Button
+					>
 				{/if}
 			</div>
 
@@ -295,7 +307,14 @@
 					<div class="empty-state-small">
 						<VideoChat size={32} />
 						<p>No active meetings right now.</p>
-						<Button size="small" kind="ghost" icon={ArrowRight} href="/meetings">
+						<Button
+							size="small"
+							kind="ghost"
+							icon={ArrowRight}
+							class="btn--labeled"
+							iconDescription="Go to meetings"
+							href="/meetings"
+						>
 							Go to Meetings
 						</Button>
 					</div>

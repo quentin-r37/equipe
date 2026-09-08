@@ -199,13 +199,22 @@
 							rows={3}
 						/>
 						<div class="edit-actions">
-							<Button size="small" type="submit" icon={Checkmark} disabled={descriptionPending}>
+							<Button
+								size="small"
+								type="submit"
+								class="btn--labeled"
+								icon={Checkmark}
+								iconDescription="Save description"
+								disabled={descriptionPending}
+							>
 								{descriptionPending ? 'Saving…' : 'Save'}
 							</Button>
 							<Button
 								size="small"
 								kind="ghost"
 								icon={Close}
+								class="btn--labeled"
+								iconDescription="Cancel"
 								disabled={descriptionPending}
 								on:click={() => (editingDescription = false)}>Cancel</Button
 							>
@@ -230,7 +239,13 @@
 			<div class="section-header">
 				<h2 class="section-title">Members</h2>
 				{#if isOwnerOrAdmin}
-					<Button size="small" icon={UserFollow} on:click={openAddMember}>Add Member</Button>
+					<Button
+						size="small"
+						icon={UserFollow}
+						class="btn--labeled"
+						iconDescription="Add member"
+						on:click={openAddMember}>Add Member</Button
+					>
 				{/if}
 			</div>
 

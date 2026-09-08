@@ -42,7 +42,13 @@
 <div class="meetings-container">
 	<div class="page-header">
 		<h3>Team meetings</h3>
-		<Button size="small" icon={Add} on:click={openCreate}>New Meeting</Button>
+		<Button
+			size="small"
+			icon={Add}
+			class="btn--labeled"
+			iconDescription="New meeting"
+			on:click={openCreate}>New Meeting</Button
+		>
 	</div>
 
 	{#if data.meetings.length === 0}
@@ -50,7 +56,14 @@
 			<div class="empty-state">
 				<VideoChat size={32} />
 				<p>No meetings yet. Start one to open a video call for your team.</p>
-				<Button size="small" kind="ghost" icon={Add} on:click={openCreate}>Start a meeting</Button>
+				<Button
+					size="small"
+					kind="ghost"
+					icon={Add}
+					class="btn--labeled"
+					iconDescription="Start a meeting"
+					on:click={openCreate}>Start a meeting</Button
+				>
 			</div>
 		</Tile>
 	{:else}
@@ -67,7 +80,13 @@
 								{m.status === 'active' ? 'Live' : 'Ended'}
 							</Tag>
 							{#if m.status === 'active'}
-								<Button size="small" icon={VideoChat} href="/meetings/{m.id}">Join</Button>
+								<Button
+									size="small"
+									icon={VideoChat}
+									class="btn--labeled"
+									iconDescription="Join meeting"
+									href="/meetings/{m.id}">Join</Button
+								>
 							{/if}
 							{#if m.createdBy === data.user.id}
 								<Button

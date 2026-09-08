@@ -107,7 +107,13 @@
 <div class="files-container">
 	<div class="page-header">
 		<h3>Files in #{data.channel.name}</h3>
-		<Button size="small" icon={Add} on:click={openUpload}>Upload</Button>
+		<Button
+			size="small"
+			icon={Add}
+			class="btn--labeled"
+			iconDescription="Upload file"
+			on:click={openUpload}>Upload</Button
+		>
 	</div>
 
 	{#if data.files.length === 0}
@@ -115,7 +121,14 @@
 			<div class="empty-state">
 				<DocumentMultiple01 size={32} />
 				<p>No files in this channel yet. Files attached to messages show up here too.</p>
-				<Button size="small" kind="ghost" icon={Add} on:click={openUpload}>Upload a file</Button>
+				<Button
+					size="small"
+					kind="ghost"
+					icon={Add}
+					class="btn--labeled"
+					iconDescription="Upload a file"
+					on:click={openUpload}>Upload a file</Button
+				>
 			</div>
 		</Tile>
 	{:else}

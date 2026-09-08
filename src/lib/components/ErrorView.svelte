@@ -57,8 +57,21 @@
 	<h1>{copy.title}</h1>
 	<p class="error-detail">{copy.detail}</p>
 	<div class="error-actions">
-		<Button href={copy.action.href} icon={Home}>{copy.action.label}</Button>
-		<Button kind="ghost" icon={ArrowLeft} on:click={() => history.back()}>Go back</Button>
+		<Button
+			href={copy.action.href}
+			class="btn--labeled"
+			icon={Home}
+			iconDescription={copy.action.label}
+		>
+			{copy.action.label}
+		</Button>
+		<Button
+			kind="ghost"
+			icon={ArrowLeft}
+			class="btn--labeled"
+			iconDescription="Go back"
+			on:click={() => history.back()}>Go back</Button
+		>
 	</div>
 </div>
 

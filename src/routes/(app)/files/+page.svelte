@@ -116,7 +116,9 @@
 <div class="page-header">
 	<h1>Files</h1>
 	{#if data.teams.length > 0}
-		<Button icon={Add} on:click={openUpload}>Upload File</Button>
+		<Button icon={Add} class="btn--labeled" iconDescription="Upload file" on:click={openUpload}
+			>Upload File</Button
+		>
 	{/if}
 </div>
 
@@ -128,8 +130,13 @@
 				<p>Join or create a team to start sharing files.</p>
 			{:else}
 				<p>No files uploaded yet.</p>
-				<Button size="small" kind="ghost" icon={Add} on:click={openUpload}
-					>Upload your first file</Button
+				<Button
+					size="small"
+					kind="ghost"
+					icon={Add}
+					class="btn--labeled"
+					iconDescription="Upload your first file"
+					on:click={openUpload}>Upload your first file</Button
 				>
 			{/if}
 		</div>
