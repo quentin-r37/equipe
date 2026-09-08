@@ -929,7 +929,6 @@
 		padding: var(--cds-spacing-04);
 		max-width: 85%;
 		border: 1px dashed var(--cds-border-strong);
-		border-radius: 4px;
 		overflow-wrap: anywhere;
 		background: var(--cds-layer-02);
 	}
@@ -970,7 +969,6 @@
 		padding: var(--cds-spacing-05) var(--cds-spacing-07);
 		background: var(--cds-layer-01);
 		border: 2px dashed var(--cds-link-primary);
-		border-radius: 8px;
 		color: var(--cds-text-primary);
 		font-size: 1.125rem;
 		font-weight: 600;
@@ -997,7 +995,7 @@
 		display: flex;
 		gap: var(--cds-spacing-03);
 		margin-bottom: var(--cds-spacing-04);
-		align-items: flex-end;
+		align-items: flex-start;
 		max-width: 100%;
 	}
 
@@ -1012,11 +1010,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border-radius: 50%;
 		background: var(--cds-link-primary);
 		color: var(--cds-text-on-color);
 		font-size: 0.875rem;
-		font-weight: 700;
+		font-weight: 600;
 	}
 
 	.compact .avatar {
@@ -1028,12 +1025,12 @@
 	.message-bubble {
 		min-width: 0;
 		max-width: 70%;
-		padding: var(--cds-spacing-03) var(--cds-spacing-04);
-		border-radius: 12px;
-		/* One step above the panel the thread sits on, so a bubble is a shape and not
-		   just its own outline. */
+		padding: var(--cds-spacing-03) var(--cds-spacing-05);
+		/* Carbon surfaces are rectangles: one layer step above the panel the thread sits
+		   on, bounded by a hairline rather than a radius or a shadow. */
 		background: var(--cds-layer-02);
 		border: 1px solid var(--cds-border-subtle);
+		border-radius: 0;
 	}
 
 	.compact .message-bubble {
@@ -1041,15 +1038,14 @@
 		padding: var(--cds-spacing-02) var(--cds-spacing-03);
 	}
 
+	/*
+	 * Blue is Carbon's interactive colour, so a bubble filled with it reads as a button.
+	 * Own messages take the selected-layer surface instead and carry the accent as the
+	 * 3px bar Carbon uses for selection everywhere else, on the side facing the avatar.
+	 */
 	.message.own .message-bubble {
-		background: var(--cds-link-primary);
-		color: var(--cds-text-on-color);
-		border-color: transparent;
-		border-bottom-right-radius: 4px;
-	}
-
-	.message:not(.own) .message-bubble {
-		border-bottom-left-radius: 4px;
+		background: var(--cds-layer-selected);
+		border-inline-end: 3px solid var(--cds-link-primary);
 	}
 
 	.message-meta {
@@ -1058,22 +1054,25 @@
 		gap: var(--cds-spacing-03);
 	}
 
+	/* Carbon heading-compact-01 for the author, label-01 for the timestamp. */
 	.author {
 		font-weight: 600;
-		font-size: 0.8125rem;
+		font-size: 0.875rem;
+		letter-spacing: 0.16px;
 	}
 
 	.time {
-		font-size: 0.6875rem;
-		color: var(--cds-text-placeholder);
+		font-size: 0.75rem;
+		letter-spacing: 0.32px;
+		color: var(--cds-text-secondary);
 	}
 
-	.message.own .time {
-		color: rgba(255, 255, 255, 0.7);
-	}
-
+	/* Carbon body-01. */
 	.message-text {
-		margin-top: var(--cds-spacing-01);
+		font-size: 0.875rem;
+		line-height: 1.43;
+		letter-spacing: 0.16px;
+		margin-top: var(--cds-spacing-02);
 		/* Preserve the line breaks the composer now allows. */
 		white-space: pre-wrap;
 		word-wrap: break-word;
@@ -1091,10 +1090,6 @@
 		overflow-wrap: anywhere;
 	}
 
-	.message.own .message-link {
-		color: #fff;
-	}
-
 	/* ── Day separators ── */
 	/* A centred date chip rather than a rule across the thread: the gap above and below
 	   already breaks the run of messages, so the line has nothing left to do. */
@@ -1106,13 +1101,11 @@
 
 	.day-separator span {
 		padding: var(--cds-spacing-02) var(--cds-spacing-04);
-		border-radius: 999px;
-		background: var(--cds-ui-03);
+		background: var(--cds-layer-02);
+		border: 1px solid var(--cds-border-subtle);
 		font-size: 0.75rem;
-		font-weight: 600;
+		letter-spacing: 0.32px;
 		color: var(--cds-text-secondary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
 		white-space: nowrap;
 	}
 
@@ -1129,13 +1122,11 @@
 		gap: var(--cds-spacing-02);
 		padding: var(--cds-spacing-02) var(--cds-spacing-05);
 		border: none;
-		border-radius: 999px;
 		background: var(--cds-link-primary);
 		color: var(--cds-text-on-color);
-		font-size: 0.75rem;
-		font-weight: 600;
+		font-size: 0.875rem;
+		letter-spacing: 0.16px;
 		cursor: pointer;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 	}
 
 	.new-messages-pill:hover {
@@ -1163,18 +1154,17 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--cds-text-secondary);
 		padding: 4px;
-		border-radius: 4px;
 	}
 
 	.action-btn:hover {
-		background: rgba(255, 255, 255, 0.15);
-		color: #fff;
+		background: var(--cds-layer-hover-01);
+		color: var(--cds-text-primary);
 	}
 
 	.action-btn.danger:hover {
-		color: #ff8389;
+		color: var(--cds-support-error);
 	}
 
 	/* ── Edit row ── */
@@ -1212,7 +1202,6 @@
 		justify-content: center;
 		background: var(--cds-layer-01);
 		border: 1px solid var(--cds-border-subtle);
-		border-radius: 50%;
 		cursor: pointer;
 		color: var(--cds-text-secondary);
 		padding: 2px;
@@ -1230,17 +1219,6 @@
 		background: var(--cds-layer-hover-01);
 	}
 
-	.message.own .file-remove-btn {
-		background: rgba(255, 255, 255, 0.2);
-		border-color: rgba(255, 255, 255, 0.3);
-		color: #fff;
-	}
-
-	.message.own .file-remove-btn:hover {
-		color: #ff8389;
-		background: rgba(255, 255, 255, 0.3);
-	}
-
 	.file-share-btn {
 		position: absolute;
 		top: 4px;
@@ -1250,7 +1228,6 @@
 		justify-content: center;
 		background: var(--cds-layer-01);
 		border: 1px solid var(--cds-border-subtle);
-		border-radius: 50%;
 		cursor: pointer;
 		color: var(--cds-text-secondary);
 		padding: 2px;
@@ -1261,9 +1238,6 @@
 	/* Shift the share button left to make room for the remove button on own messages. */
 	.message.own .file-share-btn {
 		right: 32px;
-		background: rgba(255, 255, 255, 0.2);
-		border-color: rgba(255, 255, 255, 0.3);
-		color: #fff;
 	}
 
 	.file-wrapper:hover .file-share-btn,
@@ -1276,10 +1250,6 @@
 		background: var(--cds-layer-hover-01);
 	}
 
-	.message.own .file-share-btn:hover {
-		background: rgba(255, 255, 255, 0.3);
-	}
-
 	.image-preview {
 		display: block;
 	}
@@ -1287,7 +1257,6 @@
 	.image-preview img {
 		max-width: 100%;
 		max-height: 300px;
-		border-radius: 4px;
 		object-fit: contain;
 		background: var(--cds-layer-01);
 	}
@@ -1299,7 +1268,6 @@
 	.video-preview {
 		max-width: 100%;
 		max-height: 360px;
-		border-radius: 4px;
 		background: #000;
 	}
 
@@ -1327,7 +1295,6 @@
 		padding-right: 40px;
 		background: var(--cds-layer-01);
 		border: 1px solid var(--cds-border-subtle);
-		border-radius: 4px;
 		text-decoration: none;
 		color: var(--cds-text-primary);
 		width: fit-content;
@@ -1350,21 +1317,6 @@
 	.message.own .file-attachment {
 		/* Own messages show both share + remove buttons, so reserve more room. */
 		padding-right: 68px;
-		background: rgba(255, 255, 255, 0.15);
-		border-color: rgba(255, 255, 255, 0.3);
-		color: #fff;
-	}
-
-	.message.own .file-attachment:hover {
-		background: rgba(255, 255, 255, 0.25);
-	}
-
-	.message.own .file-size {
-		color: rgba(255, 255, 255, 0.7);
-	}
-
-	.message.own .audio-attachment {
-		color: #fff;
 	}
 
 	.file-name {
@@ -1396,14 +1348,12 @@
 		padding: var(--cds-spacing-02) var(--cds-spacing-03);
 		background: var(--cds-layer-02);
 		border: 1px solid var(--cds-border-subtle);
-		border-radius: 4px;
 		font-size: 0.875rem;
 	}
 
 	.pending-thumb {
 		width: 2rem;
 		height: 2rem;
-		border-radius: 2px;
 		object-fit: cover;
 	}
 
@@ -1428,7 +1378,6 @@
 		cursor: pointer;
 		color: var(--cds-text-secondary);
 		padding: 2px;
-		border-radius: 2px;
 	}
 
 	.pending-remove:hover {

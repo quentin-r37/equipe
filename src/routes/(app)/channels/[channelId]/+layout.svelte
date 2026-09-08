@@ -180,6 +180,7 @@
 	}
 
 	.channel-title h1,
+	.rename-field,
 	.rename-input {
 		/* The shared page-header scale, so a channel is titled like every other page. */
 		font-size: clamp(1.5rem, 2vw, 2rem);

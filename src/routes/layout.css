@@ -13,6 +13,16 @@
 	--cds-spacing-10: 4rem;
 
 	/*
+	 * Numbered layer tokens. The compiled carbon-components-svelte theme only emits the
+	 * contextual `--cds-layer*` set, so every `var(--cds-layer-01)` in component CSS was
+	 * resolving to nothing and painting no background at all. Alias them here.
+	 */
+	--cds-layer-01: var(--cds-layer);
+	--cds-layer-02: var(--cds-layer-accent);
+	--cds-layer-hover-01: var(--cds-layer-hover);
+	--cds-layer-hover-02: var(--cds-layer-accent-hover);
+
+	/*
 	 * Height reserved at the bottom of the app shell for the docked meeting bar.
 	 * Zero unless `.meeting-docked` is set on <html> (see (app)/+layout.svelte), and only
 	 * on small screens, where MeetingWidget collapses into a full-width bottom bar.

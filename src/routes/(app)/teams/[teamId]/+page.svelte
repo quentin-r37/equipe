@@ -5,12 +5,8 @@
 		Button,
 		TextInput,
 		TextArea,
-		Tile,
 		Modal,
 		Tag,
-		Grid,
-		Row,
-		Column,
 		Select,
 		SelectItem,
 		InlineNotification
@@ -22,11 +18,9 @@
 	import Edit from 'carbon-icons-svelte/lib/Edit.svelte';
 	import Checkmark from 'carbon-icons-svelte/lib/Checkmark.svelte';
 	import Close from 'carbon-icons-svelte/lib/Close.svelte';
-	import Group from 'carbon-icons-svelte/lib/Group.svelte';
-	import Chat from 'carbon-icons-svelte/lib/Chat.svelte';
-	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
 	import Email from 'carbon-icons-svelte/lib/Email.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import Sparkline from '$lib/components/Sparkline.svelte';
 	import { feedbackEnhance } from '$lib/forms';
 	import type { PageData } from './$types';
 	import type { LayoutServerData } from '../../$types';
@@ -108,80 +102,157 @@
 		admin: { text: 'Admin', type: 'blue' },
 		member: { text: 'Member', type: 'cool-gray' }
 	};
+
+	/*
+	 * The KPI tiles, the same band the dashboard uses: the headline is the current total and
+	 * the sparkline under it is how many were added per day over the window, so `verb` names
+	 * what the series counts and keeps the plot from being read as the total over time.
+	 */
+	const kpis = $derived([
+		{ label: 'Members', value: data.members.length, verb: 'joined', series: data.trends.members },
+		{
+			label: 'Channels',
+			value: data.channelCount,
+			verb: 'created',
+			series: data.trends.channels
+		},
+		{
+			label: 'Meetings',
+			value: data.meetingCount,
+			verb: 'started',
+			series: data.trends.meetings
+		},
+		{ label: 'Files', value: data.fileCount, verb: 'uploaded', series: data.trends.files }
+	]);
+
+	const initials = (name: string) => name.slice(0, 2).toUpperCase();
 </script>
 
 <svelte:head>
 	<title>{data.team.name} · Equipe</title>
 </svelte:head>
 
-<div class="page-header">
-	<Button kind="ghost" icon={ArrowLeft} iconDescription="Back to dashboard" href="/" size="small" />
-	<h1>{data.team.name}</h1>
-	<Tag type={roleLabel[data.currentUserRole]?.type ?? 'cool-gray'}>
-		{roleLabel[data.currentUserRole]?.text ?? data.currentUserRole}
-	</Tag>
-</div>
+<div class="team-page">
+	<header class="team-header">
+		<div class="team-title">
+			<Button
+				kind="ghost"
+				icon={ArrowLeft}
+				iconDescription="Back to dashboard"
+				href="/"
+				size="small"
+			/>
+			<h1>{data.team.name}</h1>
+			<Tag type={roleLabel[data.currentUserRole]?.type ?? 'cool-gray'}>
+				{roleLabel[data.currentUserRole]?.text ?? data.currentUserRole}
+			</Tag>
+		</div>
+		<p>This team at a glance.</p>
+	</header>
 
-<!-- Stats -->
-<Grid fullWidth>
-	<Row>
-		<Column sm={2} md={2} lg={4} padding>
-			<Tile class="stat-tile">
-				<div class="stat">
-					<Group size={24} />
-					<div>
-						<span class="stat-value">{data.members.length}</span>
-						<span class="stat-label">{data.members.length === 1 ? 'Member' : 'Members'}</span>
-					</div>
-				</div>
-			</Tile>
-		</Column>
-		<Column sm={2} md={2} lg={4} padding>
-			<Tile class="stat-tile">
-				<div class="stat">
-					<Chat size={24} />
-					<div>
-						<span class="stat-value">{data.channelCount}</span>
-						<span class="stat-label">{data.channelCount === 1 ? 'Channel' : 'Channels'}</span>
-					</div>
-				</div>
-			</Tile>
-		</Column>
-		<Column sm={2} md={2} lg={4} padding>
-			<Tile class="stat-tile">
-				<div class="stat">
-					<VideoChat size={24} />
-					<div>
-						<span class="stat-value">{data.meetingCount}</span>
-						<span class="stat-label">{data.meetingCount === 1 ? 'Meeting' : 'Meetings'}</span>
-					</div>
-				</div>
-			</Tile>
-		</Column>
-	</Row>
-</Grid>
+	<dl class="workspace-summary">
+		{#each kpis as kpi (kpi.label)}
+			{@const added = kpi.series.reduce((a, b) => a + b, 0)}
+			<div class="kpi">
+				<dt>{kpi.label}</dt>
+				<dd>
+					<span class="kpi-value">{kpi.value}</span>
+					<span class="kpi-note">{added} {kpi.verb} · {data.trendDays}d</span>
+					<!-- A flat line on the baseline would read as a rule rather than as data,
+					     so a window with nothing in it simply gets no plot. -->
+					{#if added > 0}
+						<Sparkline
+							values={kpi.series}
+							height={32}
+							label="{kpi.label}: {added} {kpi.verb} over the last {data.trendDays} days"
+						/>
+					{/if}
+				</dd>
+			</div>
+		{/each}
+	</dl>
 
-<!-- Description -->
-<Grid fullWidth>
-	<Row>
-		<Column sm={4} md={8} lg={10} padding>
+	<div class="team-columns">
+		<!-- Members -->
+		<section class="panel">
 			<div class="section-header">
-				<h2 class="section-title">Description</h2>
-				{#if isOwnerOrAdmin && !editingDescription}
-					<Button
-						size="small"
-						kind="ghost"
-						icon={Edit}
-						iconDescription="Edit description"
-						on:click={() => {
-							descriptionValue = data.team.description ?? '';
-							editingDescription = true;
-						}}
-					/>
+				<h2 class="section-title">Members</h2>
+				{#if isOwnerOrAdmin}
+					<LabeledButton size="small" icon={UserFollow} tooltip="Add member" onclick={openAddMember}
+						>Add Member</LabeledButton
+					>
 				{/if}
 			</div>
-			{#if editingDescription}
-				<Tile>
+
+			<div class="member-list">
+				{#each data.members as member (member.id)}
+					{@const isSelf = member.userId === data.user.id}
+					<div class="member-row">
+						<span class="member-avatar" aria-hidden="true">{initials(member.userName)}</span>
+						<div class="member-info">
+							<p class="member-name">
+								{member.userName}
+								{#if isSelf}
+									<Tag size="sm" type="blue">you</Tag>
+								{/if}
+							</p>
+							<p class="member-meta">{member.userEmail}</p>
+							<p class="member-meta">
+								Joined {new Date(member.joinedAt).toLocaleDateString()}
+							</p>
+						</div>
+						<div class="member-actions">
+							{#if isOwner && member.role !== 'owner'}
+								<Select
+									labelText="Role for {member.userName}"
+									hideLabel
+									size="sm"
+									selected={member.role}
+									on:change={(e) => onRoleChange(e, member)}
+								>
+									<SelectItem value="admin" text="Admin" />
+									<SelectItem value="member" text="Member" />
+								</Select>
+							{:else}
+								<Tag size="sm" type={roleLabel[member.role]?.type ?? 'cool-gray'}>
+									{roleLabel[member.role]?.text ?? member.role}
+								</Tag>
+							{/if}
+
+							{#if member.role !== 'owner' && (isOwnerOrAdmin || isSelf)}
+								<Button
+									size="small"
+									kind="danger-ghost"
+									icon={isSelf ? Logout : TrashCan}
+									iconDescription={isSelf ? 'Leave team' : `Remove ${member.userName}`}
+									on:click={() => confirmRemove(member.id, member.userName, isSelf)}
+								/>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+		</section>
+
+		<!-- About + pending invitations -->
+		<section class="side-column">
+			<div class="panel">
+				<div class="section-header">
+					<h2 class="section-title">About</h2>
+					{#if isOwnerOrAdmin && !editingDescription}
+						<Button
+							size="small"
+							kind="ghost"
+							icon={Edit}
+							iconDescription="Edit description"
+							on:click={() => {
+								descriptionValue = data.team.description ?? '';
+								editingDescription = true;
+							}}
+						/>
+					{/if}
+				</div>
+				{#if editingDescription}
 					<form
 						method="post"
 						action="?/updateDescription"
@@ -219,101 +290,24 @@
 							>
 						</div>
 					</form>
-				</Tile>
-			{:else}
-				<Tile>
-					<p class="description-text">
-						{data.team.description || 'No description yet.'}
-					</p>
-				</Tile>
-			{/if}
-		</Column>
-	</Row>
-</Grid>
-
-<!-- Members -->
-<Grid fullWidth>
-	<Row>
-		<Column sm={4} md={8} lg={10} padding>
-			<div class="section-header">
-				<h2 class="section-title">Members</h2>
-				{#if isOwnerOrAdmin}
-					<LabeledButton size="small" icon={UserFollow} tooltip="Add member" onclick={openAddMember}
-						>Add Member</LabeledButton
-					>
+				{:else if data.team.description}
+					<p class="description-text">{data.team.description}</p>
+				{:else}
+					<p class="empty-text-inline">No description yet.</p>
 				{/if}
 			</div>
 
-			<div class="member-list">
-				{#each data.members as member (member.id)}
-					{@const isSelf = member.userId === data.user.id}
-					<Tile>
-						<div class="member-row">
-							<div class="member-info">
-								<p class="member-name">
-									{member.userName}
-									{#if isSelf}
-										<Tag size="sm" type="blue">you</Tag>
-									{/if}
-								</p>
-								<p class="member-meta">{member.userEmail}</p>
-								<p class="member-meta">
-									Joined {new Date(member.joinedAt).toLocaleDateString()}
-								</p>
-							</div>
-							<div class="member-actions">
-								{#if isOwner && member.role !== 'owner'}
-									<Select
-										labelText="Role for {member.userName}"
-										hideLabel
-										size="sm"
-										selected={member.role}
-										on:change={(e) => onRoleChange(e, member)}
-									>
-										<SelectItem value="admin" text="Admin" />
-										<SelectItem value="member" text="Member" />
-									</Select>
-								{:else}
-									<Tag size="sm" type={roleLabel[member.role]?.type ?? 'cool-gray'}>
-										{roleLabel[member.role]?.text ?? member.role}
-									</Tag>
-								{/if}
-
-								{#if member.role !== 'owner' && (isOwnerOrAdmin || isSelf)}
-									<Button
-										size="small"
-										kind="danger-ghost"
-										icon={isSelf ? Logout : TrashCan}
-										iconDescription={isSelf ? 'Leave team' : `Remove ${member.userName}`}
-										on:click={() => confirmRemove(member.id, member.userName, isSelf)}
-									/>
-								{/if}
-							</div>
-						</div>
-					</Tile>
-				{/each}
-			</div>
-		</Column>
-	</Row>
-</Grid>
-
-<!-- Pending Invitations -->
-{#if isOwnerOrAdmin && data.pendingInvitations.length > 0}
-	<Grid fullWidth>
-		<Row>
-			<Column sm={4} md={8} lg={10} padding>
-				<div class="section-header">
-					<h2 class="section-title">Pending Invitations</h2>
-				</div>
-				<div class="member-list">
-					{#each data.pendingInvitations as invitation (invitation.id)}
-						<Tile>
+			{#if isOwnerOrAdmin && data.pendingInvitations.length > 0}
+				<div class="panel">
+					<div class="section-header">
+						<h2 class="section-title">Pending Invitations</h2>
+					</div>
+					<div class="member-list">
+						{#each data.pendingInvitations as invitation (invitation.id)}
 							<div class="member-row">
+								<span class="member-avatar" aria-hidden="true"><Email size={16} /></span>
 								<div class="member-info">
-									<p class="member-name">
-										<Email size={16} />
-										{invitation.email}
-									</p>
+									<p class="member-name">{invitation.email}</p>
 									<p class="member-meta">
 										Invited {new Date(invitation.createdAt).toLocaleDateString()}
 									</p>
@@ -329,13 +323,13 @@
 									/>
 								</div>
 							</div>
-						</Tile>
-					{/each}
+						{/each}
+					</div>
 				</div>
-			</Column>
-		</Row>
-	</Grid>
-{/if}
+			{/if}
+		</section>
+	</div>
+</div>
 
 <!-- Remove member / leave team confirmation -->
 <ConfirmModal
@@ -439,113 +433,228 @@
 </Modal>
 
 <style>
-	.page-header {
+	/*
+	 * Same page system as the dashboard: separation comes from layering, not from rules —
+	 * every block is a `--cds-ui-01` surface on the `--cds-ui-background` page and the gutter
+	 * between surfaces does the dividing. The only 1px lines are the filets inside the KPI
+	 * band, where they group figures that share one surface.
+	 */
+	.team-page {
+		max-width: 90rem;
+		margin: 0 auto;
+	}
+	.team-header {
+		margin-bottom: var(--cds-spacing-06);
+	}
+	.team-title {
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-04);
-		margin-bottom: var(--cds-spacing-07);
 	}
-
-	.page-header h1 {
+	.team-header h1 {
+		font-size: clamp(1.5rem, 2vw, 2rem);
+		line-height: 1.3;
+		font-weight: 400;
 		margin: 0;
+		overflow-wrap: anywhere;
 	}
-
-	.modal-error {
-		margin-bottom: var(--cds-spacing-05);
-	}
-
-	/* Stats */
-	:global(.stat-tile) {
-		min-height: auto !important;
-	}
-
-	.stat {
-		display: flex;
-		align-items: center;
-		gap: var(--cds-spacing-04);
-	}
-
-	.stat-value {
-		display: block;
-		font-size: 1.5rem;
-		font-weight: 600;
-		line-height: 1.2;
-	}
-
-	.stat-label {
-		font-size: 0.75rem;
+	.team-header p {
+		margin-top: 0.5rem;
 		color: var(--cds-text-secondary);
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
+		font-size: 0.875rem;
 	}
-
-	/* Sections */
+	.panel {
+		background: var(--cds-ui-01);
+		padding: var(--cds-spacing-05) var(--cds-spacing-06) var(--cds-spacing-06);
+	}
+	.workspace-summary {
+		display: flex;
+		flex-wrap: wrap;
+		background: var(--cds-ui-01);
+		/* No side or bottom padding: each cell's sparkline runs to its own edges. The inset
+		   is carried by the text inside the cells instead. */
+		padding: var(--cds-spacing-05) 0 0;
+		margin: 0 0 var(--cds-spacing-05);
+	}
+	.kpi {
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 8rem;
+		border-left: 1px solid var(--cds-border-subtle);
+	}
+	.kpi:first-child {
+		border-left: none;
+	}
+	.kpi dd {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+	}
+	.kpi dt,
+	.kpi-value,
+	.kpi-note {
+		padding: 0 var(--cds-spacing-06);
+	}
+	.kpi dt {
+		color: var(--cds-text-secondary);
+		font-size: 0.75rem;
+	}
+	.kpi-value {
+		font-size: 1.75rem;
+		font-weight: 300;
+		line-height: 1.2;
+		font-variant-numeric: tabular-nums;
+	}
+	.kpi-note {
+		color: var(--cds-text-secondary);
+		font-size: 0.6875rem;
+	}
+	/* Anchor the plot to the bottom so the four line up despite unequal text height. */
+	.kpi :global(.sparkline) {
+		margin-top: auto;
+		padding-top: var(--cds-spacing-04);
+	}
+	.team-columns {
+		display: grid;
+		grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+		gap: var(--cds-spacing-05);
+		align-items: start;
+		margin-top: var(--cds-spacing-05);
+	}
+	.side-column {
+		display: flex;
+		flex-direction: column;
+		gap: var(--cds-spacing-05);
+		min-width: 0;
+	}
 	.section-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-bottom: var(--cds-spacing-05);
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.75rem;
+		min-height: 2rem;
 	}
-
 	.section-title {
 		margin: 0;
-		font-size: 1.25rem;
-		font-weight: 400;
+		font-size: 1rem;
+		font-weight: 600;
 	}
 
 	/* Description */
 	.description-text {
 		color: var(--cds-text-secondary);
+		font-size: 0.875rem;
 		margin: 0;
 		white-space: pre-wrap;
+		overflow-wrap: anywhere;
 	}
-
+	.empty-text-inline {
+		font-size: 0.8125rem;
+		color: var(--cds-text-secondary);
+	}
 	.edit-actions {
 		display: flex;
 		gap: var(--cds-spacing-03);
 		margin-top: var(--cds-spacing-04);
 	}
-
-	/* Members */
-	.member-list {
-		display: flex;
-		flex-direction: column;
-		gap: var(--cds-spacing-03);
+	/*
+	 * Carbon fills fields with `--cds-field-01`, the same value as the `--cds-ui-01` panel
+	 * they sit on here, which would leave the textarea and the role select reading as bare
+	 * text. On a raised surface the fields take the next token up.
+	 */
+	.panel :global(.bx--text-area),
+	.panel :global(.bx--select-input) {
+		background-color: var(--cds-field-02);
 	}
 
+	/*
+	 * Members and invitations are rows on a single surface rather than a tile each: the
+	 * hover band does the separating, as in the dashboard's activity and meeting lists.
+	 */
 	.member-row {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--cds-spacing-04);
 		flex-wrap: wrap;
+		padding: 0.625rem 0.5rem;
+		margin: 0 -0.5rem;
 	}
-
+	.member-row:hover,
+	.member-row:focus-within {
+		background: var(--cds-hover-ui);
+	}
+	.member-avatar {
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		flex-shrink: 0;
+		font-size: 0.75rem;
+		font-weight: 600;
+		/* One step up from the panel it sits on, so it stays visible now that
+		   the panel itself is `--cds-ui-01`. */
+		background: var(--cds-ui-03);
+		color: var(--cds-text-secondary);
+	}
 	.member-info {
 		display: flex;
 		flex-direction: column;
 		gap: var(--cds-spacing-01);
+		flex: 1;
 		min-width: 0;
 	}
-
 	.member-name {
+		font-size: 0.875rem;
 		font-weight: 600;
 		margin: 0;
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-03);
+		overflow-wrap: anywhere;
 	}
-
 	.member-meta {
-		font-size: 0.875rem;
+		font-size: 0.75rem;
 		color: var(--cds-text-secondary);
 		margin: 0;
 		overflow-wrap: anywhere;
 	}
-
 	.member-actions {
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-03);
+	}
+
+	.modal-error {
+		margin-bottom: var(--cds-spacing-05);
+	}
+
+	@media (max-width: 1056px) {
+		.team-columns {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 2rem;
+		}
+	}
+	@media (max-width: 672px) {
+		/*
+		 * Once the cells wrap, a left-border filet would reappear at the start of the second
+		 * row (CSS can't see row starts in a flex container). Below this breakpoint the band
+		 * drops the filets and separates by gutter instead — the same layering rule the rest
+		 * of the page follows.
+		 */
+		.workspace-summary {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 1px;
+			background: var(--cds-ui-background);
+			padding: 0;
+		}
+		.kpi {
+			background: var(--cds-ui-01);
+			border-left: none;
+			padding-top: var(--cds-spacing-05);
+		}
 	}
 </style>

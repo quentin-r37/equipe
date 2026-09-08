@@ -1,10 +1,19 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { team, teamMember, teamInvitation, channel, meeting, user } from '$lib/server/db/schema';
+import {
+	team,
+	teamMember,
+	teamInvitation,
+	channel,
+	meeting,
+	file,
+	user
+} from '$lib/server/db/schema';
 import { eq, and, count, gt } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { sendEmail, invitationEmailHtml } from '$lib/server/email';
+import { TREND_DAYS, trendWindow } from '$lib/server/trends';
 
 export const load: PageServerLoad = async (event) => {
 	if (!event.locals.user) throw redirect(302, '/login');
@@ -50,6 +59,21 @@ export const load: PageServerLoad = async (event) => {
 		.from(meeting)
 		.where(eq(meeting.teamId, teamId));
 
+	// Get file count
+	const [fileCount] = await db.select({ count: count() }).from(file).where(eq(file.teamId, teamId));
+
+	/*
+	 * Series behind the KPI sparklines — the same window the dashboard plots, narrowed to
+	 * this team. `members` counts joins rather than creations, hence `joinedAt`.
+	 */
+	const { countPerDay } = trendWindow();
+	const [memberTrend, channelTrend, meetingTrend, fileTrend] = await Promise.all([
+		countPerDay(teamMember, teamMember.joinedAt, eq(teamMember.teamId, teamId)),
+		countPerDay(channel, channel.createdAt, eq(channel.teamId, teamId)),
+		countPerDay(meeting, meeting.createdAt, eq(meeting.teamId, teamId)),
+		countPerDay(file, file.createdAt, eq(file.teamId, teamId))
+	]);
+
 	// Get pending invitations (owner/admin only)
 	let pendingInvitations: {
 		id: string;
@@ -84,6 +108,14 @@ export const load: PageServerLoad = async (event) => {
 		currentUserRole: membership.role,
 		channelCount: channelCount?.count ?? 0,
 		meetingCount: meetingCount?.count ?? 0,
+		fileCount: fileCount?.count ?? 0,
+		trends: {
+			members: memberTrend,
+			channels: channelTrend,
+			meetings: meetingTrend,
+			files: fileTrend
+		},
+		trendDays: TREND_DAYS,
 		pendingInvitations
 	};
 };
