@@ -60,6 +60,8 @@ services:
     image: livekit/livekit-server
     command: --config /etc/livekit.yaml
     restart: always
+    expose:
+      - 7880 # HTTP / WebSocket (signal) — exposé via le reverse proxy
     ports:
       - 7881:7881 # RTC (TCP)
       - 7882:7882/udp # RTC (UDP)
