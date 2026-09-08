@@ -921,7 +921,7 @@
 	.connection-status {
 		padding: var(--cds-spacing-03) var(--cds-spacing-05);
 		color: var(--cds-text-secondary);
-		background: var(--cds-layer-01);
+		background: var(--cds-layer-02);
 		font-size: 0.875rem;
 	}
 	.outgoing-message {
@@ -931,7 +931,7 @@
 		border: 1px dashed var(--cds-border-strong);
 		border-radius: 4px;
 		overflow-wrap: anywhere;
-		background: var(--cds-layer-01);
+		background: var(--cds-layer-02);
 	}
 	.outgoing-message.failed {
 		border-color: var(--cds-support-error);
@@ -941,12 +941,18 @@
 		color: var(--cds-text-secondary);
 	}
 
+	/*
+	 * Thread and composer are one surface sitting under the channel's tab rail, the way the
+	 * dashboard's blocks are single surfaces on the page. In the meeting sidebar the panel
+	 * around it is already this layer, so the value holds there too.
+	 */
 	.chat-container {
 		display: flex;
 		flex-direction: column;
 		flex: 1;
 		min-height: 0;
 		position: relative;
+		background: var(--cds-ui-01);
 	}
 
 	.drop-overlay {
@@ -1024,7 +1030,9 @@
 		max-width: 70%;
 		padding: var(--cds-spacing-03) var(--cds-spacing-04);
 		border-radius: 12px;
-		background: var(--cds-layer-01);
+		/* One step above the panel the thread sits on, so a bubble is a shape and not
+		   just its own outline. */
+		background: var(--cds-layer-02);
 		border: 1px solid var(--cds-border-subtle);
 	}
 
@@ -1386,7 +1394,7 @@
 		align-items: center;
 		gap: var(--cds-spacing-03);
 		padding: var(--cds-spacing-02) var(--cds-spacing-03);
-		background: var(--cds-layer-01);
+		background: var(--cds-layer-02);
 		border: 1px solid var(--cds-border-subtle);
 		border-radius: 4px;
 		font-size: 0.875rem;
@@ -1429,30 +1437,33 @@
 	}
 
 	/* ── Input area ── */
+	/* The composer shares the panel's surface with the thread above it, so a hairline does
+	   the dividing — the same filet the dashboard uses between figures on one surface. */
 	.input-area {
 		position: relative;
-		/* The composer is its own surface over the thread's page background — the layer
-		   change divides it from the messages, so no rule is needed. */
-		background: var(--cds-ui-01);
-	}
-
-	/* In the meeting sidebar the whole panel is already `--cds-ui-01`, so there the layer
-	   change has nothing to say and a hairline does the dividing instead. */
-	.compact .input-area {
-		background: none;
 		border-top: 1px solid var(--cds-border-subtle);
 	}
 
+	/*
+	 * One field rather than three controls in a row: attach, textarea and send share a
+	 * single box with the field's own background and underline, so the composer reads as
+	 * one place to type instead of a strip of loose parts.
+	 */
 	.input-row {
 		display: flex;
 		/* Keep the buttons pinned to the bottom as the composer grows. */
 		align-items: flex-end;
-		gap: var(--cds-spacing-03);
-		padding: var(--cds-spacing-05) var(--cds-spacing-06) 0;
+		margin: var(--cds-spacing-05) var(--cds-spacing-06) 0;
+		background: var(--cds-field-02);
+		border-bottom: 1px solid var(--cds-ui-04);
+	}
+
+	.input-row:focus-within {
+		border-bottom-color: var(--cds-focus);
 	}
 
 	.compact .input-row {
-		padding: var(--cds-spacing-03) var(--cds-spacing-04);
+		margin: var(--cds-spacing-03) var(--cds-spacing-04);
 	}
 
 	.input-field {
@@ -1460,21 +1471,28 @@
 		min-width: 0;
 	}
 
-	/* The composer is a textarea sized like a single-line field until it needs to grow. */
+	/*
+	 * The composer is a textarea sized like a single-line field until it needs to grow.
+	 * Its own background, underline and focus ring are handed to `.input-row`, which owns
+	 * them for the whole box.
+	 */
 	.input-field :global(.bx--text-area) {
 		min-height: 2.5rem;
 		max-height: 10rem;
-		padding-top: 0.6875rem;
-		padding-bottom: 0.6875rem;
+		min-width: 0;
+		padding: 0.6875rem var(--cds-spacing-03);
 		resize: none;
 		overflow-y: auto;
-		/* `--cds-field-01` is the same value as the `--cds-ui-01` bar the composer now sits
-		   on, so the field takes the next step up to stay readable as a field. */
-		background: var(--cds-field-02);
+		background: none;
+		border-bottom: none;
+	}
+
+	.input-field :global(.bx--text-area:focus),
+	.input-field :global(.bx--text-area:active) {
+		outline: none;
 	}
 
 	.compact .input-field :global(.bx--text-area) {
-		background: var(--cds-field-01);
 		min-height: 2rem;
 		max-height: 6rem;
 		padding-top: var(--cds-spacing-03);
@@ -1491,7 +1509,7 @@
 	.input-hint {
 		margin: 0;
 		padding: var(--cds-spacing-02) var(--cds-spacing-06) var(--cds-spacing-05);
-		/* Line the helper text up with the field, past the attach button and its gap. */
+		/* Line the helper text up with the text, past the attach button inside the box. */
 		padding-left: calc(2.5rem + var(--cds-spacing-03) + var(--cds-spacing-06));
 		font-size: 0.6875rem;
 		color: var(--cds-text-helper);

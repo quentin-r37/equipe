@@ -49,9 +49,10 @@
 
 <div class="channel-layout">
 	<!--
-		Title and tabs share one `--cds-ui-01` surface, the way the dashboard's blocks do: the
-		change of layer against the page background below is what separates the chrome from the
-		tab content, so neither of them needs a rule of its own.
+		The channel name is the page title, so it gets the same treatment as every other page
+		header in the shell: h1 scale on the page background, description underneath. The tab
+		bar carries the hairline the shared `.page-header` rule would have drawn, and the tab
+		content is the surface that sits under it.
 	-->
 	<header class="channel-chrome">
 		<div class="channel-header">
@@ -101,7 +102,7 @@
 				</form>
 			{:else}
 				<div class="channel-title">
-					<h2><span class="hash" aria-hidden="true">#</span>{data.channel.name}</h2>
+					<h1><span class="hash" aria-hidden="true">#</span>{data.channel.name}</h1>
 					{#if canRename}
 						<button class="icon-btn edit-btn" aria-label="Rename channel" onclick={startEditing}>
 							<Edit size={16} />
@@ -161,11 +162,10 @@
 
 	.channel-chrome {
 		flex-shrink: 0;
-		background: var(--cds-ui-01);
 	}
 
 	.channel-header {
-		padding: var(--cds-spacing-05) var(--cds-spacing-06) var(--cds-spacing-04);
+		padding-bottom: var(--cds-spacing-05);
 	}
 
 	/*
@@ -179,14 +179,15 @@
 		min-height: 2.5rem;
 	}
 
-	.channel-title h2,
+	.channel-title h1,
 	.rename-input {
-		font-size: 1.25rem;
+		/* The shared page-header scale, so a channel is titled like every other page. */
+		font-size: clamp(1.5rem, 2vw, 2rem);
 		font-weight: 400;
 		line-height: 1.2;
 	}
 
-	.channel-title h2 {
+	.channel-title h1 {
 		min-width: 0;
 		overflow-wrap: anywhere;
 	}
@@ -223,7 +224,7 @@
 	}
 
 	.channel-desc {
-		margin-top: var(--cds-spacing-02);
+		margin-top: var(--cds-spacing-03);
 		font-size: 0.875rem;
 		color: var(--cds-text-secondary);
 		overflow-wrap: anywhere;
@@ -261,9 +262,15 @@
 		cursor: not-allowed;
 	}
 
+	/*
+	 * The bar's hairline is the one the shared `.page-header` rule draws under a page title;
+	 * here it doubles as the rail the active tab's marker sits on. Tabs are spaced by a gap
+	 * rather than padded, so the first label starts on the same left edge as the title.
+	 */
 	.tab-bar {
 		display: flex;
-		padding: 0 var(--cds-spacing-06);
+		gap: var(--cds-spacing-06);
+		border-bottom: 1px solid var(--cds-border-subtle);
 	}
 
 	.tab {
@@ -271,7 +278,8 @@
 		display: flex;
 		align-items: center;
 		gap: var(--cds-spacing-03);
-		padding: var(--cds-spacing-03) var(--cds-spacing-05);
+		padding: var(--cds-spacing-03) 0;
+		margin-bottom: -1px;
 		color: var(--cds-text-secondary);
 		text-decoration: none;
 		font-size: 0.875rem;
@@ -320,11 +328,13 @@
 			margin-bottom: calc(-1 * var(--cds-spacing-04) - var(--meeting-dock-height));
 		}
 
+		/* The layout is full-bleed here, so the chrome re-adds the inset the shell dropped. */
 		.channel-header {
-			padding: var(--cds-spacing-04) var(--cds-spacing-04) var(--cds-spacing-03);
+			padding: var(--cds-spacing-04) var(--cds-spacing-04) var(--cds-spacing-04);
 		}
 
 		.tab-bar {
+			gap: var(--cds-spacing-05);
 			padding: 0 var(--cds-spacing-04);
 		}
 	}
