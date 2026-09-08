@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
 	import {
+		Button,
 		OverflowMenu,
 		OverflowMenuItem,
 		TextInput,
@@ -15,6 +16,7 @@
 	import Group from 'carbon-icons-svelte/lib/Group.svelte';
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
 	import ArrowRight from 'carbon-icons-svelte/lib/ArrowRight.svelte';
+	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import Sparkline from '$lib/components/Sparkline.svelte';
 	import { feedbackEnhance } from '$lib/forms';
@@ -30,6 +32,8 @@
 	let showChannelModal = $state(false);
 	let channelPending = $state(false);
 	let channelError = $state('');
+	/** Pre-selects the team in the channel modal when it is opened from a team card. */
+	let channelTeamId = $state('');
 
 	let showAddMemberModal = $state(false);
 	let addMemberTeamId = $state('');
@@ -43,6 +47,12 @@
 	function confirmDelete(type: 'team' | 'channel', id: string, name: string) {
 		deleteTarget = { type, id, name };
 		showDeleteConfirm = true;
+	}
+
+	function openAddChannel(teamId: string) {
+		channelTeamId = teamId;
+		channelError = '';
+		showChannelModal = true;
 	}
 
 	function openAddMember(teamId: string) {
@@ -162,10 +172,7 @@
 							kind="ghost"
 							icon={Add}
 							tooltip="Add channel"
-							onclick={() => {
-								channelError = '';
-								showChannelModal = true;
-							}}
+							onclick={() => openAddChannel(data.teams[0]?.id ?? '')}
 						>
 							Channel
 						</LabeledButton>
@@ -222,6 +229,7 @@
 								<div class="team-actions">
 									<OverflowMenu size="sm" flipped portalMenu iconDescription="Actions for {t.name}">
 										<OverflowMenuItem text="Team settings" href={resolve(`/teams/${t.id}`)} />
+										<OverflowMenuItem text="Add channel" on:click={() => openAddChannel(t.id)} />
 										{#if canManageMembers(t.id)}
 											<OverflowMenuItem text="Add member" on:click={() => openAddMember(t.id)} />
 										{/if}
@@ -247,18 +255,13 @@
 											{ch.name}
 										</a>
 										{#if canDeleteChannel(ch)}
-											<OverflowMenu
-												size="sm"
-												flipped
-												portalMenu
-												iconDescription="Actions for #{ch.name}"
-											>
-												<OverflowMenuItem
-													text="Delete channel"
-													danger
-													on:click={() => confirmDelete('channel', ch.id, ch.name)}
-												/>
-											</OverflowMenu>
+											<Button
+												size="small"
+												kind="danger-ghost"
+												icon={TrashCan}
+												iconDescription="Delete #{ch.name}"
+												on:click={() => confirmDelete('channel', ch.id, ch.name)}
+											/>
 										{/if}
 									</div>
 								{/each}
@@ -432,7 +435,7 @@
 		})}
 	>
 		<div class="form-field">
-			<Select name="teamId" labelText="Team">
+			<Select name="teamId" labelText="Team" bind:selected={channelTeamId}>
 				{#each data.teams as t (t.id)}
 					<SelectItem value={t.id} text={t.name} />
 				{/each}
