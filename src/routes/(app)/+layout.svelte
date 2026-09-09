@@ -50,6 +50,17 @@
 	onMount(() => {
 		isSideNavOpen = localStorage.getItem(SIDE_NAV_KEY) !== 'false';
 		sideNavRestored = true;
+
+		// The open/close transition (see `.sidenav-motion` in layout.css) is enabled only once
+		// the restored state has painted: the server renders the nav expanded, so a collapsed
+		// preference would otherwise slide the nav away on every full page load.
+		const frame = requestAnimationFrame(() =>
+			requestAnimationFrame(() => document.documentElement.classList.add('sidenav-motion'))
+		);
+		return () => {
+			cancelAnimationFrame(frame);
+			document.documentElement.classList.remove('sidenav-motion');
+		};
 	});
 
 	$effect(() => {

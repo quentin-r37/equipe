@@ -16,6 +16,42 @@
 	--cds-motion-exit-productive: #{motion.motion(exit, productive)};
 }
 
+/* SideNav open/close choreography.
+ * https://carbondesignsystem.com/elements/motion/choreography/
+ *
+ * Carbon's compiled CSS only transitions `width`, but the closed state of
+ * `carbon-components-svelte` is `transform: translate(-16rem)` plus an inline
+ * `visibility: hidden`, so the panel snaps in and out with no motion at all.
+ *
+ * The nav enters and exits the viewport, so it takes entrance/exit easing; `.bx--content`
+ * stays on screen the whole time and only reflows, so it takes standard easing. Both run
+ * on the same `duration-moderate-02` so they start and end as one movement. `visibility`
+ * gets a plain duration: it flips to visible on the first frame in, and to hidden only on
+ * the last frame out, which is what keeps the outbound slide on screen.
+ *
+ * Gated on `.sidenav-motion` (set one frame after the persisted open state is restored in
+ * (app)/+layout.svelte) so a collapsed preference doesn't replay the slide-out on every
+ * full page load.
+ */
+:root.sidenav-motion .bx--side-nav {
+	transition:
+		transform motion.$duration-moderate-02 motion.motion(exit, productive),
+		width motion.$duration-moderate-02 motion.motion(exit, productive),
+		visibility motion.$duration-moderate-02;
+}
+
+:root.sidenav-motion .bx--content {
+	transition: margin-left motion.$duration-moderate-02 motion.motion(standard, productive);
+}
+
+/* Opening animates the incoming state, so entrance easing belongs on the expanded rules. */
+:root.sidenav-motion .bx--side-nav--expanded {
+	transition:
+		transform motion.$duration-moderate-02 motion.motion(entrance, productive),
+		width motion.$duration-moderate-02 motion.motion(entrance, productive),
+		visibility motion.$duration-moderate-02;
+}
+
 /* Opt-in entrances for transient UI. Animate opacity/translate only, without
  * changing layout or replacing transforms used for positioning (e.g. chat pill).
  * No fill-mode: avoid retaining a stacking context after the entrance finishes.
@@ -68,6 +104,14 @@
 	.equipe-motion-rise,
 	.equipe-motion-panel {
 		animation: none;
+	}
+
+	/* The SideNav rules interpolate Sass tokens, so the zeroed CSS vars below don't reach
+	 * them — cut the transitions outright. `visibility` must stay instant here too. */
+	:root.sidenav-motion .bx--side-nav,
+	:root.sidenav-motion .bx--side-nav--expanded,
+	:root.sidenav-motion .bx--content {
+		transition: none;
 	}
 
 	:root {
