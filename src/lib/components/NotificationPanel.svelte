@@ -3,8 +3,12 @@
 	import { resolve } from '$app/paths';
 	import type { Pathname } from '$app/types';
 	import { notificationState } from '$lib/stores/notifications.svelte';
+	import { addItem, listMotion, reflow, removeItem } from '$lib/motion.svelte';
 
 	let { onnavigate }: { onnavigate: () => void } = $props();
+
+	// Notifications that land while the panel is open slide into the top of the list.
+	const motion = listMotion();
 </script>
 
 <section class="notification-panel equipe-motion-fade" aria-label="Notification history">
@@ -28,7 +32,12 @@
 	{:else}
 		<ul>
 			{#each notificationState.history as n (n.id)}
-				<li class:unread={!n.read}>
+				<li
+					class:unread={!n.read}
+					in:addItem={{ enabled: motion.ready }}
+					out:removeItem
+					animate:reflow
+				>
 					<a
 						href={resolve(n.href as Pathname)}
 						onclick={() => {

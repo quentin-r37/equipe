@@ -2,10 +2,14 @@
 	import { Button, Tile, Tag, TextInput } from 'carbon-components-svelte';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import { addItem, listMotion, reflow, removeItem } from '$lib/motion.svelte';
 	import type { PageData } from './$types';
 	import type { LayoutServerData } from '../../$types';
 
 	let { data }: { data: PageData & LayoutServerData } = $props();
+
+	// A deleted account fades out before the list closes the gap.
+	const motion = listMotion();
 
 	let deleteTarget = $state<{ id: string; name: string; email: string } | null>(null);
 	let showDeleteConfirm = $state(false);
@@ -38,37 +42,40 @@
 {:else}
 	<div class="user-list">
 		{#each data.users as u (u.id)}
-			<Tile>
-				<div class="user-row">
-					<div>
-						<p class="user-name">{u.name}</p>
-						<p class="user-meta">
-							{u.email}
-							{#if u.emailVerified}
-								<Tag size="sm" type="green">verified</Tag>
+			<!-- Tile is a component, so the motion directives need an element of their own. -->
+			<div in:addItem={{ enabled: motion.ready }} out:removeItem animate:reflow>
+				<Tile>
+					<div class="user-row">
+						<div>
+							<p class="user-name">{u.name}</p>
+							<p class="user-meta">
+								{u.email}
+								{#if u.emailVerified}
+									<Tag size="sm" type="green">verified</Tag>
+								{:else}
+									<Tag size="sm" type="warm-gray">not verified</Tag>
+								{/if}
+							</p>
+							<p class="user-meta">
+								Joined {new Date(u.createdAt).toLocaleDateString()}
+							</p>
+						</div>
+						<div class="user-actions">
+							{#if u.id !== data.user.id}
+								<Button
+									size="small"
+									kind="danger-ghost"
+									icon={TrashCan}
+									iconDescription="Delete {u.email}"
+									on:click={() => confirmDelete(u)}
+								/>
 							{:else}
-								<Tag size="sm" type="warm-gray">not verified</Tag>
+								<Tag size="sm" type="blue">you</Tag>
 							{/if}
-						</p>
-						<p class="user-meta">
-							Joined {new Date(u.createdAt).toLocaleDateString()}
-						</p>
+						</div>
 					</div>
-					<div class="user-actions">
-						{#if u.id !== data.user.id}
-							<Button
-								size="small"
-								kind="danger-ghost"
-								icon={TrashCan}
-								iconDescription="Delete {u.email}"
-								on:click={() => confirmDelete(u)}
-							/>
-						{:else}
-							<Tag size="sm" type="blue">you</Tag>
-						{/if}
-					</div>
-				</div>
-			</Tile>
+				</Tile>
+			</div>
 		{/each}
 	</div>
 {/if}

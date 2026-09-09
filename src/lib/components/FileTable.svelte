@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { addItem, listMotion, reflow, removeItem } from '$lib/motion.svelte';
 	import { Button, Tag, OverflowMenu, OverflowMenuItem } from 'carbon-components-svelte';
 	import { formatSize } from '$lib/files';
 	import * as m from '$lib/paraglide/messages';
@@ -38,6 +40,10 @@
 		onshare: (id: string) => void;
 		ondelete: (file: FileEntry) => void;
 	} = $props();
+
+	// Rows uploaded or deleted while the table is on screen animate; the ones it loads with don't.
+	const motion = listMotion();
+
 	function mimeIcon(mime: string): Component {
 		if (mime.startsWith('image/')) return ImageIcon;
 		if (mime.startsWith('video/')) return DocumentVideo;
@@ -80,47 +86,59 @@
 			></thead
 		>
 		<tbody>
-			{#each files as file (file.id)}
-				{@const Icon = mimeIcon(file.mimeType)}
-				<tr>
-					<td class="name-cell"
-						><div class="file-name">
-							<span class="file-icon" aria-hidden="true"><Icon size={20} /></span><span
-								class="name-text">{file.name}</span
-							>{#if file.shareCount > 0}<Tag size="sm" type="cool-gray" icon={Share}
-									>{m.share_shared({ count: file.shareCount })}</Tag
-								>{/if}
-						</div></td
-					>
-					<td class="metadata"
-						>{file.name.includes('.') ? file.name.split('.').pop()?.toUpperCase() : 'File'}</td
-					>
-					<td class="metadata">{formatSize(file.size)}</td>
-					<td class="metadata author">{file.userName}</td>
-					<td class="metadata">{new Date(file.createdAt).toLocaleDateString()}</td>
-					<td class="actions-cell"
-						><div class="file-actions">
-							<Button
-								size="small"
-								kind="ghost"
-								icon={Download}
-								iconDescription="Download {file.name}"
-								portalTooltip
-								href={`${resolve('/api/files')}?id=${encodeURIComponent(file.id)}`}
-							/>
-							<OverflowMenu size="sm" flipped portalMenu iconDescription="Actions for {file.name}">
-								<OverflowMenuItem text={m.share_file()} on:click={() => onshare(file.id)} />
-								{#if file.userId === userId}<OverflowMenuItem
-										text="Delete file"
-										danger
-										hasDivider
-										on:click={() => ondelete(file)}
-									/>{/if}
-							</OverflowMenu>
-						</div></td
-					>
-				</tr>
-			{/each}
+			<!--
+				Keyed on the URL: a filter, a sort or a page turn replaces the whole result set, and
+				rebuilding the block swaps it in one go instead of animating every row out and a new
+				set in. An upload or a delete keeps the URL, so those still animate row by row.
+			-->
+			{#key page.url.href}
+				{#each files as file (file.id)}
+					{@const Icon = mimeIcon(file.mimeType)}
+					<tr in:addItem={{ enabled: motion.ready }} out:removeItem animate:reflow>
+						<td class="name-cell"
+							><div class="file-name">
+								<span class="file-icon" aria-hidden="true"><Icon size={20} /></span><span
+									class="name-text">{file.name}</span
+								>{#if file.shareCount > 0}<Tag size="sm" type="cool-gray" icon={Share}
+										>{m.share_shared({ count: file.shareCount })}</Tag
+									>{/if}
+							</div></td
+						>
+						<td class="metadata"
+							>{file.name.includes('.') ? file.name.split('.').pop()?.toUpperCase() : 'File'}</td
+						>
+						<td class="metadata">{formatSize(file.size)}</td>
+						<td class="metadata author">{file.userName}</td>
+						<td class="metadata">{new Date(file.createdAt).toLocaleDateString()}</td>
+						<td class="actions-cell"
+							><div class="file-actions">
+								<Button
+									size="small"
+									kind="ghost"
+									icon={Download}
+									iconDescription="Download {file.name}"
+									portalTooltip
+									href={`${resolve('/api/files')}?id=${encodeURIComponent(file.id)}`}
+								/>
+								<OverflowMenu
+									size="sm"
+									flipped
+									portalMenu
+									iconDescription="Actions for {file.name}"
+								>
+									<OverflowMenuItem text={m.share_file()} on:click={() => onshare(file.id)} />
+									{#if file.userId === userId}<OverflowMenuItem
+											text="Delete file"
+											danger
+											hasDivider
+											on:click={() => ondelete(file)}
+										/>{/if}
+								</OverflowMenu>
+							</div></td
+						>
+					</tr>
+				{/each}
+			{/key}
 		</tbody>
 	</table>
 </div>

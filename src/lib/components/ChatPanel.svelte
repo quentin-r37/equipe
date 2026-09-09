@@ -15,6 +15,7 @@
 	import { untrack } from 'svelte';
 	import { notificationState } from '$lib/stores/notifications.svelte';
 	import { messageOutbox, type OutgoingMessage } from '$lib/stores/messageOutbox.svelte';
+	import { addItem, listMotion, reflow, removeItem } from '$lib/motion.svelte';
 	import { formatSize, validateUpload } from '$lib/files';
 	import * as m from '$lib/paraglide/messages';
 
@@ -47,6 +48,8 @@
 		compact?: boolean;
 	} = $props();
 
+	// Identity of the current backlog: changes only when the whole set is replaced. See `$effect`.
+	let backlog = $state(0);
 	let loadedMessages = $state<ChatMessage[]>([]);
 	let sseMessages = $state<ChatMessage[]>([]);
 	const messages = $derived([
@@ -124,6 +127,13 @@
 		const initial = untrack(() => initialMessages);
 		sseMessages = [];
 		unreadCount = 0;
+		/*
+		 * Bumped in the same run as the wholesale reassignment below, so the keyed block in the
+		 * template is rebuilt with the new backlog already in place. Keying on `channelId`
+		 * instead would rebuild it one flush early — with the previous channel's messages —
+		 * and every one of them would then animate out against the new channel's arrivals.
+		 */
+		backlog = untrack(() => backlog) + 1;
 
 		if (initial) {
 			loading = false;
@@ -584,6 +594,14 @@
 	}
 
 	const isOwn = (msg: ChatMessage) => msg.userId === userId;
+
+	/*
+	 * Only what arrives after the panel is up animates: the backlog a channel opens with is
+	 * already on screen. Messages carry no `animate:reflow` — the day separator makes them
+	 * two nodes per keyed block, which an animation directive cannot sit on — but they are
+	 * appended at the bottom, so nothing below them has to move out of the way.
+	 */
+	const motion = listMotion();
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -641,156 +659,180 @@
 		{:else if messages.length === 0 && !outgoing.some((entry) => entry.channelId === channelId)}
 			<p class="empty-state">No messages yet. Start the conversation!</p>
 		{/if}
-		{#if messages.length > 0}
-			{#each timeline as { msg, daySeparator } (msg.id)}
-				{#if daySeparator}
-					<div class="day-separator"><span>{daySeparator}</span></div>
-				{/if}
-				<div class="message" class:own={isOwn(msg)}>
-					{#if !isOwn(msg)}
-						<div class="avatar">
-							{msg.userName.charAt(0).toUpperCase()}
-						</div>
+		<!--
+			Keyed on the backlog so switching conversations swaps it outright instead of playing
+			every message of the old channel out against the new channel's arrivals. Transitions
+			are local, so nothing animates when this block is rebuilt — only messages that arrive
+			or are deleted afterwards animate.
+		-->
+		{#key backlog}
+			{#if messages.length > 0}
+				{#each timeline as { msg, daySeparator } (msg.id)}
+					{#if daySeparator}
+						<div class="day-separator"><span>{daySeparator}</span></div>
 					{/if}
-					<div class="message-bubble">
-						<div class="message-meta">
-							{#if !isOwn(msg)}
-								<span class="author">{msg.userName}</span>
-							{/if}
-							<span class="time" title={fullTimestamp(msg.createdAt)}
-								>{formatTime(msg.createdAt)}</span
-							>
-							{#if isOwn(msg)}
-								<div class="message-actions">
-									{#if editingId !== msg.id}
+					<div
+						class="message"
+						class:own={isOwn(msg)}
+						in:addItem={{ enabled: motion.ready }}
+						out:removeItem
+					>
+						{#if !isOwn(msg)}
+							<div class="avatar">
+								{msg.userName.charAt(0).toUpperCase()}
+							</div>
+						{/if}
+						<div class="message-bubble">
+							<div class="message-meta">
+								{#if !isOwn(msg)}
+									<span class="author">{msg.userName}</span>
+								{/if}
+								<span class="time" title={fullTimestamp(msg.createdAt)}
+									>{formatTime(msg.createdAt)}</span
+								>
+								{#if isOwn(msg)}
+									<div class="message-actions">
+										{#if editingId !== msg.id}
+											<button
+												class="action-btn"
+												title="Edit message"
+												aria-label="Edit message"
+												onclick={() => startEdit(msg)}
+											>
+												<Edit size={16} />
+											</button>
+										{/if}
 										<button
-											class="action-btn"
-											title="Edit message"
-											aria-label="Edit message"
-											onclick={() => startEdit(msg)}
+											class="action-btn danger"
+											title="Delete message"
+											aria-label="Delete message"
+											onclick={() => askDeleteMessage(msg)}
 										>
-											<Edit size={16} />
+											<TrashCan size={16} />
 										</button>
-									{/if}
-									<button
-										class="action-btn danger"
-										title="Delete message"
-										aria-label="Delete message"
-										onclick={() => askDeleteMessage(msg)}
-									>
-										<TrashCan size={16} />
-									</button>
-								</div>
-							{/if}
-						</div>
-						{#if editingId === msg.id}
-							<div class="edit-row equipe-motion-fade">
-								<div class="edit-field">
-									<TextArea
-										bind:value={editContent}
-										on:keydown={handleEditKeydown}
-										hideLabel
-										labelText="Edit message"
-										rows={2}
+									</div>
+								{/if}
+							</div>
+							{#if editingId === msg.id}
+								<div class="edit-row equipe-motion-fade">
+									<div class="edit-field">
+										<TextArea
+											bind:value={editContent}
+											on:keydown={handleEditKeydown}
+											hideLabel
+											labelText="Edit message"
+											rows={2}
+										/>
+									</div>
+									<Button
+										icon={Checkmark}
+										iconDescription="Save"
+										kind="ghost"
+										size="small"
+										disabled={savingEdit}
+										on:click={saveEdit}
+									/>
+									<Button
+										icon={Close}
+										iconDescription="Cancel"
+										kind="ghost"
+										size="small"
+										disabled={savingEdit}
+										on:click={cancelEdit}
 									/>
 								</div>
-								<Button
-									icon={Checkmark}
-									iconDescription="Save"
-									kind="ghost"
-									size="small"
-									disabled={savingEdit}
-									on:click={saveEdit}
-								/>
-								<Button
-									icon={Close}
-									iconDescription="Cancel"
-									kind="ghost"
-									size="small"
-									disabled={savingEdit}
-									on:click={cancelEdit}
-								/>
-							</div>
-						{:else if msg.content}
-							<p class="message-text">{@render richText(msg.content)}</p>
-						{/if}
-						{#if msg.files && msg.files.length > 0}
-							<div class="message-files">
-								{#each msg.files as f (f.id)}
-									<div class="file-wrapper">
-										{#if isImage(f.mimeType)}
-											<a
-												href={resolve(`/api/files?id=${f.id}`)}
-												target="_blank"
-												class="file-preview image-preview"
-											>
-												<img
-													src={resolve(`/api/files?id=${f.id}&inline=1`)}
-													alt={f.name}
-													loading="lazy"
-												/>
-											</a>
-										{:else if isVideo(f.mimeType)}
-											<!-- svelte-ignore a11y_media_has_caption -->
-											<video
-												src={resolve(`/api/files?id=${f.id}&inline=1`)}
-												controls
-												preload="metadata"
-												class="file-preview video-preview"
-											></video>
-										{:else if isAudio(f.mimeType)}
-											<div class="file-attachment audio-attachment">
-												<span class="file-name">{f.name}</span>
-												<audio
+							{:else if msg.content}
+								<p class="message-text">{@render richText(msg.content)}</p>
+							{/if}
+							{#if msg.files && msg.files.length > 0}
+								<div class="message-files">
+									{#each msg.files as f (f.id)}
+										<div
+											class="file-wrapper"
+											in:addItem={{ enabled: motion.ready }}
+											out:removeItem
+											animate:reflow
+										>
+											{#if isImage(f.mimeType)}
+												<a
+													href={resolve(`/api/files?id=${f.id}`)}
+													target="_blank"
+													class="file-preview image-preview"
+												>
+													<img
+														src={resolve(`/api/files?id=${f.id}&inline=1`)}
+														alt={f.name}
+														loading="lazy"
+													/>
+												</a>
+											{:else if isVideo(f.mimeType)}
+												<!-- svelte-ignore a11y_media_has_caption -->
+												<video
 													src={resolve(`/api/files?id=${f.id}&inline=1`)}
 													controls
 													preload="metadata"
-												></audio>
-											</div>
-										{:else}
-											<a
-												href={resolve(`/api/files?id=${f.id}`)}
-												class="file-attachment"
-												target="_blank"
-											>
-												<Download size={16} />
-												<span class="file-name">{f.name}</span>
-												<span class="file-size">{formatSize(f.size)}</span>
-											</a>
-										{/if}
-										<button
-											class="file-share-btn"
-											title={m.share_file()}
-											aria-label="{m.share_file()}: {f.name}"
-											onclick={() => openShare(f.id)}
-										>
-											<Share size={16} />
-										</button>
-										{#if isOwn(msg)}
+													class="file-preview video-preview"
+												></video>
+											{:else if isAudio(f.mimeType)}
+												<div class="file-attachment audio-attachment">
+													<span class="file-name">{f.name}</span>
+													<audio
+														src={resolve(`/api/files?id=${f.id}&inline=1`)}
+														controls
+														preload="metadata"
+													></audio>
+												</div>
+											{:else}
+												<a
+													href={resolve(`/api/files?id=${f.id}`)}
+													class="file-attachment"
+													target="_blank"
+												>
+													<Download size={16} />
+													<span class="file-name">{f.name}</span>
+													<span class="file-size">{formatSize(f.size)}</span>
+												</a>
+											{/if}
 											<button
-												class="file-remove-btn"
-												title="Delete file"
-												aria-label="Delete file {f.name}"
-												onclick={() => askDeleteFile(f, msg)}
+												class="file-share-btn"
+												title={m.share_file()}
+												aria-label="{m.share_file()}: {f.name}"
+												onclick={() => openShare(f.id)}
 											>
-												<Close size={16} />
+												<Share size={16} />
 											</button>
-										{/if}
-									</div>
-								{/each}
+											{#if isOwn(msg)}
+												<button
+													class="file-remove-btn"
+													title="Delete file"
+													aria-label="Delete file {f.name}"
+													onclick={() => askDeleteFile(f, msg)}
+												>
+													<Close size={16} />
+												</button>
+											{/if}
+										</div>
+									{/each}
+								</div>
+							{/if}
+						</div>
+						{#if isOwn(msg)}
+							<div class="avatar">
+								{msg.userName.charAt(0).toUpperCase()}
 							</div>
 						{/if}
 					</div>
-					{#if isOwn(msg)}
-						<div class="avatar">
-							{msg.userName.charAt(0).toUpperCase()}
-						</div>
-					{/if}
-				</div>
-			{/each}
-		{/if}
+				{/each}
+			{/if}
+		{/key}
 		{#each outgoing.filter((entry) => entry.channelId === channelId) as entry (entry.id)}
-			<div class="outgoing-message equipe-motion-fade" class:failed={entry.status === 'failed'}>
+			<div
+				class="outgoing-message"
+				class:failed={entry.status === 'failed'}
+				in:addItem={{ enabled: motion.ready }}
+				out:removeItem
+				animate:reflow
+			>
 				<p class="message-text">{entry.content}</p>
 				{#each entry.files as attachment, index (index)}
 					<p>{attachment.name} · {formatSize(attachment.size)}</p>
@@ -824,7 +866,7 @@
 		{#if pendingFiles.length > 0}
 			<div class="pending-files">
 				{#each pendingFiles as f, i (f.name + f.size + i)}
-					<div class="pending-file equipe-motion-fade">
+					<div class="pending-file" in:addItem out:removeItem animate:reflow>
 						{#if isImage(f.type)}
 							<img src={URL.createObjectURL(f)} alt={f.name} class="pending-thumb" />
 						{/if}

@@ -4,7 +4,12 @@
 	import { resolve } from '$app/paths';
 	import type { Pathname } from '$app/types';
 	import { notificationState, type AppNotification } from '$lib/stores/notifications.svelte';
+	import { addItem, reflow, removeItem } from '$lib/motion.svelte';
 	import * as m from '$lib/paraglide/messages';
+
+	// Toasts come in and leave the same way they are stacked: from the right edge. Nothing is
+	// ever on screen at mount, so the entrance needs no `listMotion` gate.
+	const slide = { axis: 'x', distance: 'var(--cds-spacing-05)' } as const;
 
 	function getKind(type: string): 'info' | 'info-square' | 'success' {
 		switch (type) {
@@ -51,7 +56,7 @@
 -->
 <div class="notification-container" role="log" aria-live="polite">
 	{#each notificationState.toasts as t (t.id)}
-		<div class="notification-wrapper equipe-motion-panel">
+		<div class="notification-wrapper" in:addItem={slide} out:removeItem={slide} animate:reflow>
 			<ToastNotification
 				kind={t.kind}
 				title={t.title}
@@ -65,7 +70,7 @@
 		</div>
 	{/each}
 	{#each notificationState.notifications as n (n.id)}
-		<div class="notification-wrapper equipe-motion-panel">
+		<div class="notification-wrapper" in:addItem={slide} out:removeItem={slide} animate:reflow>
 			<ToastNotification
 				kind={getKind(n.type)}
 				subtitle="{n.channelName ? `#${n.channelName} — ` : ''}{n.teamName}"

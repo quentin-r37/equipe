@@ -23,10 +23,14 @@
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import KpiBand from '$lib/components/KpiBand.svelte';
 	import { feedbackEnhance } from '$lib/forms';
+	import { addItem, listMotion, reflow, removeItem } from '$lib/motion.svelte';
 	import type { PageData } from './$types';
 	import type { LayoutServerData } from '../../$types';
 
 	let { data }: { data: PageData & LayoutServerData } = $props();
+
+	// Members and invitations added or removed while the page is open animate in and out.
+	const motion = listMotion();
 
 	// ── Name ──
 	let editingName = $state(false);
@@ -229,52 +233,60 @@
 			</div>
 
 			<div class="member-list">
-				{#each data.members as member (member.id)}
-					{@const isSelf = member.userId === data.user.id}
-					<div class="member-row">
-						<span class="member-avatar" aria-hidden="true">{initials(member.userName)}</span>
-						<div class="member-info">
-							<p class="member-name">
-								{member.userName}
-								{#if isSelf}
-									<Tag size="sm" type="blue">you</Tag>
+				<!-- Keyed on the team: opening another one swaps the roster instead of animating it. -->
+				{#key data.team.id}
+					{#each data.members as member (member.id)}
+						{@const isSelf = member.userId === data.user.id}
+						<div
+							class="member-row"
+							in:addItem={{ enabled: motion.ready }}
+							out:removeItem
+							animate:reflow
+						>
+							<span class="member-avatar" aria-hidden="true">{initials(member.userName)}</span>
+							<div class="member-info">
+								<p class="member-name">
+									{member.userName}
+									{#if isSelf}
+										<Tag size="sm" type="blue">you</Tag>
+									{/if}
+								</p>
+								<p class="member-meta">{member.userEmail}</p>
+								<p class="member-meta">
+									Joined {new Date(member.joinedAt).toLocaleDateString()}
+								</p>
+							</div>
+							<div class="member-actions">
+								{#if isOwner && member.role !== 'owner'}
+									<Select
+										labelText="Role for {member.userName}"
+										hideLabel
+										size="sm"
+										selected={member.role}
+										on:change={(e) => onRoleChange(e, member)}
+									>
+										<SelectItem value="admin" text="Admin" />
+										<SelectItem value="member" text="Member" />
+									</Select>
+								{:else}
+									<Tag size="sm" type={roleLabel[member.role]?.type ?? 'cool-gray'}>
+										{roleLabel[member.role]?.text ?? member.role}
+									</Tag>
 								{/if}
-							</p>
-							<p class="member-meta">{member.userEmail}</p>
-							<p class="member-meta">
-								Joined {new Date(member.joinedAt).toLocaleDateString()}
-							</p>
-						</div>
-						<div class="member-actions">
-							{#if isOwner && member.role !== 'owner'}
-								<Select
-									labelText="Role for {member.userName}"
-									hideLabel
-									size="sm"
-									selected={member.role}
-									on:change={(e) => onRoleChange(e, member)}
-								>
-									<SelectItem value="admin" text="Admin" />
-									<SelectItem value="member" text="Member" />
-								</Select>
-							{:else}
-								<Tag size="sm" type={roleLabel[member.role]?.type ?? 'cool-gray'}>
-									{roleLabel[member.role]?.text ?? member.role}
-								</Tag>
-							{/if}
 
-							{#if member.role !== 'owner' && (isOwnerOrAdmin || isSelf)}
-								<Button
-									size="small"
-									kind="danger-ghost"
-									icon={isSelf ? Logout : TrashCan}
-									iconDescription={isSelf ? 'Leave team' : `Remove ${member.userName}`}
-									on:click={() => confirmRemove(member.id, member.userName, isSelf)}
-								/>
-							{/if}
+								{#if member.role !== 'owner' && (isOwnerOrAdmin || isSelf)}
+									<Button
+										size="small"
+										kind="danger-ghost"
+										icon={isSelf ? Logout : TrashCan}
+										iconDescription={isSelf ? 'Leave team' : `Remove ${member.userName}`}
+										on:click={() => confirmRemove(member.id, member.userName, isSelf)}
+									/>
+								{/if}
+							</div>
 						</div>
-					</div>
-				{/each}
+					{/each}
+				{/key}
 			</div>
 		</section>
 
@@ -347,27 +359,34 @@
 						<h2 class="section-title">Pending Invitations</h2>
 					</div>
 					<div class="member-list">
-						{#each data.pendingInvitations as invitation (invitation.id)}
-							<div class="member-row">
-								<span class="member-avatar" aria-hidden="true"><Email size={16} /></span>
-								<div class="member-info">
-									<p class="member-name">{invitation.email}</p>
-									<p class="member-meta">
-										Invited {new Date(invitation.createdAt).toLocaleDateString()}
-									</p>
+						{#key data.team.id}
+							{#each data.pendingInvitations as invitation (invitation.id)}
+								<div
+									class="member-row"
+									in:addItem={{ enabled: motion.ready }}
+									out:removeItem
+									animate:reflow
+								>
+									<span class="member-avatar" aria-hidden="true"><Email size={16} /></span>
+									<div class="member-info">
+										<p class="member-name">{invitation.email}</p>
+										<p class="member-meta">
+											Invited {new Date(invitation.createdAt).toLocaleDateString()}
+										</p>
+									</div>
+									<div class="member-actions">
+										<Tag size="sm" type="cyan">Pending</Tag>
+										<Button
+											size="small"
+											kind="danger-ghost"
+											icon={TrashCan}
+											iconDescription="Cancel invitation for {invitation.email}"
+											on:click={() => confirmCancelInvitation(invitation.id, invitation.email)}
+										/>
+									</div>
 								</div>
-								<div class="member-actions">
-									<Tag size="sm" type="cyan">Pending</Tag>
-									<Button
-										size="small"
-										kind="danger-ghost"
-										icon={TrashCan}
-										iconDescription="Cancel invitation for {invitation.email}"
-										on:click={() => confirmCancelInvitation(invitation.id, invitation.email)}
-									/>
-								</div>
-							</div>
-						{/each}
+							{/each}
+						{/key}
 					</div>
 				</div>
 			{/if}

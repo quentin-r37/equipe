@@ -16,10 +16,14 @@
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import { feedbackEnhance } from '$lib/forms';
+	import { addItem, listMotion, reflow, removeItem } from '$lib/motion.svelte';
 	import type { PageServerData } from './$types';
 	import type { LayoutServerData } from '../$types';
 
 	let { data }: { data: PageServerData & LayoutServerData } = $props();
+
+	// A meeting started or deleted while the list is on screen animates in or out.
+	const motion = listMotion();
 
 	let showModal = $state(false);
 	let createPending = $state(false);
@@ -112,7 +116,12 @@
 		{:else}
 			<div class="meeting-list">
 				{#each data.meetings as m (m.id)}
-					<div class="meeting-row">
+					<div
+						class="meeting-row"
+						in:addItem={{ enabled: motion.ready }}
+						out:removeItem
+						animate:reflow
+					>
 						<span class="meeting-avatar" class:live={m.status === 'active'} aria-hidden="true">
 							<VideoChat size={16} />
 						</span>

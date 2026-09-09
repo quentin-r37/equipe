@@ -3,6 +3,7 @@
 	import Copy from 'carbon-icons-svelte/lib/Copy.svelte';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { addItem, listMotion, reflow, removeItem } from '$lib/motion.svelte';
 	import * as m from '$lib/paraglide/messages';
 
 	type ShareDTO = {
@@ -15,6 +16,9 @@
 	};
 
 	let { fileId, open = $bindable(false) }: { fileId: string; open?: boolean } = $props();
+
+	// A created link drops into the list, a revoked one fades out before the list closes up.
+	const motion = listMotion();
 
 	let shares = $state<ShareDTO[]>([]);
 	let loadingShares = $state(false);
@@ -150,60 +154,68 @@
 				<p class="share-empty">{m.share_no_links()}</p>
 			{:else}
 				<ul class="link-list">
-					{#each shares as s (s.id)}
-						<li class="link-item">
-							<div class="link-info">
-								<span class="link-url" title={s.url}>{s.url}</span>
-								<span class="link-meta">
-									{#if copiedId === s.id}
-										<span class="link-copied">{m.share_link_copied()}</span>
+					<!-- Keyed on the file: reopening for another one swaps the list rather than animating it. -->
+					{#key fileId}
+						{#each shares as s (s.id)}
+							<li
+								class="link-item"
+								in:addItem={{ enabled: motion.ready }}
+								out:removeItem
+								animate:reflow
+							>
+								<div class="link-info">
+									<span class="link-url" title={s.url}>{s.url}</span>
+									<span class="link-meta">
+										{#if copiedId === s.id}
+											<span class="link-copied">{m.share_link_copied()}</span>
+										{:else}
+											{metaLabel(s)}
+										{/if}
+									</span>
+								</div>
+								<div class="link-actions">
+									{#if confirmRevokeId === s.id}
+										<span class="revoke-question">{m.share_revoke()}?</span>
+										<Button
+											kind="danger"
+											size="small"
+											disabled={revokingId === s.id}
+											on:click={() => revoke(s.id)}
+										>
+											{m.share_revoke()}
+										</Button>
+										<Button
+											kind="ghost"
+											size="small"
+											disabled={revokingId === s.id}
+											on:click={() => (confirmRevokeId = '')}
+										>
+											Cancel
+										</Button>
 									{:else}
-										{metaLabel(s)}
+										<Button
+											kind="ghost"
+											size="small"
+											icon={Copy}
+											tooltipPosition="top"
+											iconDescription={copiedId === s.id
+												? m.share_link_copied()
+												: m.share_copy_link()}
+											on:click={() => copyLink(s)}
+										/>
+										<Button
+											kind="danger-ghost"
+											size="small"
+											icon={TrashCan}
+											tooltipPosition="top"
+											iconDescription={m.share_revoke()}
+											on:click={() => (confirmRevokeId = s.id)}
+										/>
 									{/if}
-								</span>
-							</div>
-							<div class="link-actions">
-								{#if confirmRevokeId === s.id}
-									<span class="revoke-question">{m.share_revoke()}?</span>
-									<Button
-										kind="danger"
-										size="small"
-										disabled={revokingId === s.id}
-										on:click={() => revoke(s.id)}
-									>
-										{m.share_revoke()}
-									</Button>
-									<Button
-										kind="ghost"
-										size="small"
-										disabled={revokingId === s.id}
-										on:click={() => (confirmRevokeId = '')}
-									>
-										Cancel
-									</Button>
-								{:else}
-									<Button
-										kind="ghost"
-										size="small"
-										icon={Copy}
-										tooltipPosition="top"
-										iconDescription={copiedId === s.id
-											? m.share_link_copied()
-											: m.share_copy_link()}
-										on:click={() => copyLink(s)}
-									/>
-									<Button
-										kind="danger-ghost"
-										size="small"
-										icon={TrashCan}
-										tooltipPosition="top"
-										iconDescription={m.share_revoke()}
-										on:click={() => (confirmRevokeId = s.id)}
-									/>
-								{/if}
-							</div>
-						</li>
-					{/each}
+								</div>
+							</li>
+						{/each}
+					{/key}
 				</ul>
 			{/if}
 		</section>
