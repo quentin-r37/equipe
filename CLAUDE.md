@@ -37,7 +37,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Auth**: Better Auth (email/password) with Drizzle adapter
 - **i18n**: Paraglide (English + French), messages in `/messages/{locale}.json`
 - **Video**: LiveKit (client + server SDK)
-- **File storage**: SeaweedFS (HTTP API via filer)
+- **File storage**: SeaweedFS via its S3 gateway (`@aws-sdk/client-s3`, path-style)
 - **Infra**: Docker Compose for dev services (`docker-compose.infra.yml`)
 
 ### Route Groups
@@ -70,7 +70,7 @@ Uses Carbon Design System CSS tokens (`--cds-spacing-*`, `--cds-text-*`, `--cds-
 
 ## Environment Variables
 
-Required in `.env`: `DATABASE_URL`, `ORIGIN`, `BETTER_AUTH_SECRET`, `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `SEAWEEDFS_FILER_URL`.
+Required in `.env`: `DATABASE_URL`, `ORIGIN`, `BETTER_AUTH_SECRET`, `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`.
 
 Optional: `ADMIN_EMAILS` — comma-separated list of emails that can access the admin panel (`/admin/users`).
 

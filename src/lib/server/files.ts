@@ -54,9 +54,10 @@ export async function storeUploadedFile(opts: StoreUploadOptions) {
 
 	const name = sanitizeFilename(opts.upload.name);
 	const fileId = crypto.randomUUID();
-	const storagePath = `equipe/${opts.teamId}/${fileId}/${encodeURIComponent(name)}`;
+	// Object key: the S3 SDK encodes it on the wire, so the readable name is stored as-is.
+	const storagePath = `${opts.teamId}/${fileId}/${name}`;
 
-	await uploadFile(storagePath, opts.upload, name);
+	await uploadFile(storagePath, opts.upload, opts.upload.type || 'application/octet-stream');
 
 	try {
 		const [record] = await db

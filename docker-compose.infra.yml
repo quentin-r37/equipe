@@ -18,7 +18,7 @@ services:
 
   seaweedfs:
     image: chrislusf/seaweedfs:latest
-    command: 'server -s3 -dir=/data -master.volumeSizeLimitMB=100 -ip.bind=0.0.0.0'
+    command: 'server -s3 -s3.config=/etc/seaweedfs/s3.json -dir=/data -master.volumeSizeLimitMB=100 -ip.bind=0.0.0.0'
     ports:
       - 9333:9333 # Master
       - 8080:8080 # Volume
@@ -26,8 +26,9 @@ services:
       - 8333:8333 # S3
     volumes:
       - seaweedfs_data:/data
+      - ./docker/seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro
     healthcheck:
-      test: ['CMD', 'curl', '-sf', 'http://localhost:8888/']
+      test: ['CMD', 'curl', '-sf', 'http://localhost:8333/healthz']
       interval: 10s
       timeout: 5s
       retries: 5
