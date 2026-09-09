@@ -61,6 +61,12 @@
 	let loadAttempt = $state(0);
 	let connection = $state<'connecting' | 'connected' | 'reconnecting'>('connecting');
 	const outgoing = $derived(messageOutbox.items);
+	/** The pending sends this channel actually draws — see `OutgoingMessage.visible`. */
+	const pendingCards = $derived(
+		outgoing.filter(
+			(entry) => entry.channelId === channelId && (entry.visible || entry.status === 'failed')
+		)
+	);
 	$effect(() => {
 		const confirmedIds = new Set(messages.map((msg) => msg.id));
 		untrack(() => {
@@ -288,7 +294,8 @@
 			content,
 			files: [...pendingFiles],
 			status: 'sending',
-			error: ''
+			error: '',
+			visible: false
 		};
 		messageOutbox.items = [...outgoing, item];
 		newMessage = '';
@@ -297,6 +304,13 @@
 		await transmit(item.id);
 	}
 
+	/*
+	 * How long a send may take before its card is drawn. Below this the confirmed message is
+	 * already on screen, and showing the card first only puts two animations — the card in and
+	 * out, the message in — where one message arrived.
+	 */
+	const PENDING_CARD_DELAY_MS = 400;
+
 	async function transmit(id: string) {
 		if (sending) return;
 		const item = outgoing.find((entry) => entry.id === id);
@@ -304,6 +318,7 @@
 		sending = true;
 		item.status = 'sending';
 		item.error = '';
+		const reveal = setTimeout(() => (item.visible = true), PENDING_CARD_DELAY_MS);
 		const { content, files: filesToSend, channelId: targetChannel } = item;
 
 		try {
@@ -339,7 +354,10 @@
 		} catch (err) {
 			item.status = 'failed';
 			item.error = err instanceof Error ? err.message : 'Your message could not be sent.';
+			// A failure is never withheld, however fast it came back.
+			item.visible = true;
 		} finally {
+			clearTimeout(reveal);
 			sending = false;
 		}
 	}
@@ -597,9 +615,9 @@
 
 	/*
 	 * Only what arrives after the panel is up animates: the backlog a channel opens with is
-	 * already on screen. Messages carry no `animate:reflow` — the day separator makes them
-	 * two nodes per keyed block, which an animation directive cannot sit on — but they are
-	 * appended at the bottom, so nothing below them has to move out of the way.
+	 * already on screen. A message and the day separator that opens its day travel together in
+	 * one wrapper, so the animation directives have a single node to sit on and deleting a
+	 * message from the middle of the thread lets the rest close the gap instead of jumping.
 	 */
 	const motion = listMotion();
 </script>
@@ -668,169 +686,176 @@
 		{#key backlog}
 			{#if messages.length > 0}
 				{#each timeline as { msg, daySeparator } (msg.id)}
-					{#if daySeparator}
-						<div class="day-separator"><span>{daySeparator}</span></div>
-					{/if}
 					<div
-						class="message"
-						class:own={isOwn(msg)}
+						class="timeline-item"
 						in:addItem={{ enabled: motion.ready }}
 						out:removeItem
+						animate:reflow
 					>
-						{#if !isOwn(msg)}
-							<div class="avatar">
-								{msg.userName.charAt(0).toUpperCase()}
-							</div>
+						{#if daySeparator}
+							<div class="day-separator"><span>{daySeparator}</span></div>
 						{/if}
-						<div class="message-bubble">
-							<div class="message-meta">
-								{#if !isOwn(msg)}
-									<span class="author">{msg.userName}</span>
-								{/if}
-								<span class="time" title={fullTimestamp(msg.createdAt)}
-									>{formatTime(msg.createdAt)}</span
-								>
-								{#if isOwn(msg)}
-									<div class="message-actions">
-										{#if editingId !== msg.id}
+						<div class="message" class:own={isOwn(msg)}>
+							{#if !isOwn(msg)}
+								<div class="avatar">
+									{msg.userName.charAt(0).toUpperCase()}
+								</div>
+							{/if}
+							<div class="message-bubble">
+								<div class="message-meta">
+									{#if !isOwn(msg)}
+										<span class="author">{msg.userName}</span>
+									{/if}
+									<span class="time" title={fullTimestamp(msg.createdAt)}
+										>{formatTime(msg.createdAt)}</span
+									>
+									{#if isOwn(msg)}
+										<div class="message-actions">
+											{#if editingId !== msg.id}
+												<button
+													class="action-btn"
+													title="Edit message"
+													aria-label="Edit message"
+													onclick={() => startEdit(msg)}
+												>
+													<Edit size={16} />
+												</button>
+											{/if}
 											<button
-												class="action-btn"
-												title="Edit message"
-												aria-label="Edit message"
-												onclick={() => startEdit(msg)}
+												class="action-btn danger"
+												title="Delete message"
+												aria-label="Delete message"
+												onclick={() => askDeleteMessage(msg)}
 											>
-												<Edit size={16} />
+												<TrashCan size={16} />
 											</button>
-										{/if}
-										<button
-											class="action-btn danger"
-											title="Delete message"
-											aria-label="Delete message"
-											onclick={() => askDeleteMessage(msg)}
-										>
-											<TrashCan size={16} />
-										</button>
-									</div>
-								{/if}
-							</div>
-							{#if editingId === msg.id}
-								<div class="edit-row equipe-motion-fade">
-									<div class="edit-field">
-										<TextArea
-											bind:value={editContent}
-											on:keydown={handleEditKeydown}
-											hideLabel
-											labelText="Edit message"
-											rows={2}
+										</div>
+									{/if}
+								</div>
+								{#if editingId === msg.id}
+									<div class="edit-row equipe-motion-fade">
+										<div class="edit-field">
+											<TextArea
+												bind:value={editContent}
+												on:keydown={handleEditKeydown}
+												hideLabel
+												labelText="Edit message"
+												rows={2}
+											/>
+										</div>
+										<Button
+											icon={Checkmark}
+											iconDescription="Save"
+											kind="ghost"
+											size="small"
+											disabled={savingEdit}
+											on:click={saveEdit}
+										/>
+										<Button
+											icon={Close}
+											iconDescription="Cancel"
+											kind="ghost"
+											size="small"
+											disabled={savingEdit}
+											on:click={cancelEdit}
 										/>
 									</div>
-									<Button
-										icon={Checkmark}
-										iconDescription="Save"
-										kind="ghost"
-										size="small"
-										disabled={savingEdit}
-										on:click={saveEdit}
-									/>
-									<Button
-										icon={Close}
-										iconDescription="Cancel"
-										kind="ghost"
-										size="small"
-										disabled={savingEdit}
-										on:click={cancelEdit}
-									/>
-								</div>
-							{:else if msg.content}
-								<p class="message-text">{@render richText(msg.content)}</p>
-							{/if}
-							{#if msg.files && msg.files.length > 0}
-								<div class="message-files">
-									{#each msg.files as f (f.id)}
-										<div
-											class="file-wrapper"
-											in:addItem={{ enabled: motion.ready }}
-											out:removeItem
-											animate:reflow
-										>
-											{#if isImage(f.mimeType)}
-												<a
-													href={resolve(`/api/files?id=${f.id}`)}
-													target="_blank"
-													class="file-preview image-preview"
-												>
-													<img
-														src={resolve(`/api/files?id=${f.id}&inline=1`)}
-														alt={f.name}
-														loading="lazy"
-													/>
-												</a>
-											{:else if isVideo(f.mimeType)}
-												<!-- svelte-ignore a11y_media_has_caption -->
-												<video
-													src={resolve(`/api/files?id=${f.id}&inline=1`)}
-													controls
-													preload="metadata"
-													class="file-preview video-preview"
-												></video>
-											{:else if isAudio(f.mimeType)}
-												<div class="file-attachment audio-attachment">
-													<span class="file-name">{f.name}</span>
-													<audio
+								{:else if msg.content}
+									<p class="message-text">{@render richText(msg.content)}</p>
+								{/if}
+								{#if msg.files && msg.files.length > 0}
+									<div class="message-files">
+										{#each msg.files as f (f.id)}
+											<div
+												class="file-wrapper"
+												in:addItem={{ enabled: motion.ready }}
+												out:removeItem
+												animate:reflow
+											>
+												{#if isImage(f.mimeType)}
+													<a
+														href={resolve(`/api/files?id=${f.id}`)}
+														target="_blank"
+														class="file-preview image-preview"
+													>
+														<img
+															src={resolve(`/api/files?id=${f.id}&inline=1`)}
+															alt={f.name}
+															loading="lazy"
+														/>
+													</a>
+												{:else if isVideo(f.mimeType)}
+													<!-- svelte-ignore a11y_media_has_caption -->
+													<video
 														src={resolve(`/api/files?id=${f.id}&inline=1`)}
 														controls
 														preload="metadata"
-													></audio>
-												</div>
-											{:else}
-												<a
-													href={resolve(`/api/files?id=${f.id}`)}
-													class="file-attachment"
-													target="_blank"
-												>
-													<Download size={16} />
-													<span class="file-name">{f.name}</span>
-													<span class="file-size">{formatSize(f.size)}</span>
-												</a>
-											{/if}
-											<button
-												class="file-share-btn"
-												title={m.share_file()}
-												aria-label="{m.share_file()}: {f.name}"
-												onclick={() => openShare(f.id)}
-											>
-												<Share size={16} />
-											</button>
-											{#if isOwn(msg)}
+														class="file-preview video-preview"
+													></video>
+												{:else if isAudio(f.mimeType)}
+													<div class="file-attachment audio-attachment">
+														<span class="file-name">{f.name}</span>
+														<audio
+															src={resolve(`/api/files?id=${f.id}&inline=1`)}
+															controls
+															preload="metadata"
+														></audio>
+													</div>
+												{:else}
+													<a
+														href={resolve(`/api/files?id=${f.id}`)}
+														class="file-attachment"
+														target="_blank"
+													>
+														<Download size={16} />
+														<span class="file-name">{f.name}</span>
+														<span class="file-size">{formatSize(f.size)}</span>
+													</a>
+												{/if}
 												<button
-													class="file-remove-btn"
-													title="Delete file"
-													aria-label="Delete file {f.name}"
-													onclick={() => askDeleteFile(f, msg)}
+													class="file-share-btn"
+													title={m.share_file()}
+													aria-label="{m.share_file()}: {f.name}"
+													onclick={() => openShare(f.id)}
 												>
-													<Close size={16} />
+													<Share size={16} />
 												</button>
-											{/if}
-										</div>
-									{/each}
+												{#if isOwn(msg)}
+													<button
+														class="file-remove-btn"
+														title="Delete file"
+														aria-label="Delete file {f.name}"
+														onclick={() => askDeleteFile(f, msg)}
+													>
+														<Close size={16} />
+													</button>
+												{/if}
+											</div>
+										{/each}
+									</div>
+								{/if}
+							</div>
+							{#if isOwn(msg)}
+								<div class="avatar">
+									{msg.userName.charAt(0).toUpperCase()}
 								</div>
 							{/if}
 						</div>
-						{#if isOwn(msg)}
-							<div class="avatar">
-								{msg.userName.charAt(0).toUpperCase()}
-							</div>
-						{/if}
 					</div>
 				{/each}
 			{/if}
 		{/key}
-		{#each outgoing.filter((entry) => entry.channelId === channelId) as entry (entry.id)}
+		<!--
+			Only sends slow enough to have earned a card, plus anything that failed. The card
+			leaves without an outro once it is on its way out for the usual reason — the confirmed
+			message is fading in over the same spot — and only fades when the reader discards it.
+		-->
+		{#each pendingCards as entry (entry.id)}
 			<div
 				class="outgoing-message"
 				class:failed={entry.status === 'failed'}
 				in:addItem={{ enabled: motion.ready }}
-				out:removeItem
+				out:removeItem={{ enabled: entry.status === 'failed' }}
 				animate:reflow
 			>
 				<p class="message-text">{entry.content}</p>
