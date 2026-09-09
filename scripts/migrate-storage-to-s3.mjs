@@ -20,11 +20,14 @@ import {
 import postgres from 'postgres';
 
 const dryRun = process.argv.includes('--dry-run');
-const filerUrl = process.env.SEAWEEDFS_FILER_URL || 'http://localhost:8888';
+// The filer sits on 8888 next to the S3 gateway on 8333, so the endpoint gives us both the
+// local (`localhost`) and the in-cluster (`seaweedfs`) host without extra configuration.
+const s3Endpoint = process.env.S3_ENDPOINT || 'http://localhost:8333';
+const filerUrl = process.env.SEAWEEDFS_FILER_URL || s3Endpoint.replace(/:8333(\/|$)/, ':8888$1');
 const bucket = process.env.S3_BUCKET || 'equipe';
 
 const s3 = new S3Client({
-	endpoint: process.env.S3_ENDPOINT || 'http://localhost:8333',
+	endpoint: s3Endpoint,
 	region: process.env.S3_REGION || 'us-east-1',
 	credentials: {
 		accessKeyId: process.env.S3_ACCESS_KEY || 'equipeadmin',

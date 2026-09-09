@@ -17,6 +17,8 @@ COPY --from=builder /app/build build/
 COPY --from=builder /app/node_modules node_modules/
 COPY --from=builder /app/drizzle drizzle/
 COPY --from=builder /app/drizzle.config.ts .
+# One-shot maintenance scripts, run with `docker exec` (e.g. migrate-storage-to-s3.mjs).
+COPY --from=builder /app/scripts scripts/
 COPY package.json .
 
 ENV NODE_ENV=production

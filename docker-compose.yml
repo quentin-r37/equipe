@@ -53,7 +53,11 @@ services:
     restart: always
     volumes:
       - seaweedfs_data:/data
-      - ./docker/seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro
+    # Inline, comme livekit_config : Coolify ne dépose que le compose dans le dossier de
+    # déploiement, donc un bind mount `./docker/...` monterait un répertoire vide.
+    configs:
+      - source: seaweedfs_s3_config
+        target: /etc/seaweedfs/s3.json
     healthcheck:
       test: ['CMD', 'curl', '-sf', 'http://localhost:8333/healthz']
       interval: 10s
@@ -81,6 +85,23 @@ services:
         target: /etc/livekit.yaml
 
 configs:
+  seaweedfs_s3_config:
+    content: |
+      {
+        "identities": [
+          {
+            "name": "admin",
+            "credentials": [
+              {
+                "accessKey": "${S3_ACCESS_KEY:-equipeadmin}",
+                "secretKey": "${S3_SECRET_KEY:-equipeadmin}"
+              }
+            ],
+            "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+          }
+        ]
+      }
+
   livekit_config:
     content: |
       port: 7880
