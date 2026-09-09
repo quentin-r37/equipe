@@ -17,8 +17,11 @@
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
 	import ArrowRight from 'carbon-icons-svelte/lib/ArrowRight.svelte';
 	import TrashCan from 'carbon-icons-svelte/lib/TrashCan.svelte';
+	import Document from 'carbon-icons-svelte/lib/Document.svelte';
+	import UserAvatar from 'carbon-icons-svelte/lib/UserAvatar.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import KpiBand from '$lib/components/KpiBand.svelte';
+	import HeroBanner from '$lib/components/HeroBanner.svelte';
 	import { feedbackEnhance } from '$lib/forms';
 	import type { PageData } from './$types';
 
@@ -145,10 +148,28 @@
 </svelte:head>
 
 <div class="dashboard">
-	<header class="dashboard-header">
-		<h1>Welcome, {data.user.name || data.user.email}</h1>
-		<p>Your workspace at a glance.</p>
-	</header>
+	<HeroBanner
+		title="Welcome, {data.user.name || data.user.email}"
+		description="Your workspace at a glance — teams, channels, meetings and files in one place."
+		asideTitle="Jump back in"
+	>
+		{#snippet aside()}
+			<ul>
+				<li>
+					<VideoChat size={16} />
+					<a href={resolve('/meetings')}>Meetings</a>
+				</li>
+				<li>
+					<Document size={16} />
+					<a href={resolve('/files')}>Files</a>
+				</li>
+				<li>
+					<UserAvatar size={16} />
+					<a href={resolve('/profile')}>Profile</a>
+				</li>
+			</ul>
+		{/snippet}
+	</HeroBanner>
 	{#if data.teams.length > 0}
 		<KpiBand {kpis} days={data.trendDays} />
 	{/if}
@@ -519,19 +540,9 @@
 		max-width: 90rem;
 		margin: 0 auto;
 	}
-	.dashboard-header h1 {
-		font-size: clamp(1.5rem, 2vw, 2rem);
-		line-height: 1.3;
-		font-weight: 400;
-		overflow-wrap: anywhere;
-	}
-	.dashboard-header {
-		margin-bottom: var(--cds-spacing-06);
-	}
-	.dashboard-header p {
-		margin-top: 0.5rem;
-		color: var(--cds-text-secondary);
-		font-size: 0.875rem;
+	/* Same gutter as the rest of the page: the banner is one more surface on the canvas. */
+	.dashboard > :global(.hero-banner) {
+		margin-bottom: var(--cds-spacing-05);
 	}
 	/*
 	 * Separation on this page comes from layering, not from rules: every block is a
