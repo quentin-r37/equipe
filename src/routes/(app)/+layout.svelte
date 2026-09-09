@@ -36,7 +36,24 @@
 	let { data, children }: { data: LayoutServerData; children: Snippet } = $props();
 
 	let isSideNavOpen = $state(true);
+
+	/*
+	 * Header panels are mutually exclusive. Carbon's `HeaderAction` closes its own panel on an
+	 * outside click, but its trigger button stops click propagation, so pressing one trigger
+	 * never reaches the window listener that would dismiss the others — without this, the theme,
+	 * notification and user panels stack on top of each other. Each action reports `on:open` and
+	 * we close the siblings explicitly.
+	 */
+	type HeaderMenu = 'notifications' | 'theme' | 'user';
 	let notificationsOpen = $state(false);
+	let themeOpen = $state(false);
+	let userMenuOpen = $state(false);
+
+	function openOnly(menu: HeaderMenu) {
+		notificationsOpen = menu === 'notifications';
+		themeOpen = menu === 'theme';
+		userMenuOpen = menu === 'user';
+	}
 
 	/*
 	 * `persistentHamburgerMenu` keeps the toggle visible above Carbon's 1056px breakpoint,
@@ -103,15 +120,26 @@
 	<HeaderUtilities>
 		<HeaderAction
 			bind:isOpen={notificationsOpen}
+			on:open={() => openOnly('notifications')}
 			iconDescription={`Notifications (${notificationState.unreadCount} unread)`}
 			icon={hasUnread ? NotificationNew : NotificationIcon}
 		>
 			<NotificationPanel onnavigate={() => (notificationsOpen = false)} />
 		</HeaderAction>
-		<HeaderAction icon={ColorPalette} iconDescription="Theme">
+		<HeaderAction
+			bind:isOpen={themeOpen}
+			on:open={() => openOnly('theme')}
+			icon={ColorPalette}
+			iconDescription="Theme"
+		>
 			<ThemeSelector />
 		</HeaderAction>
-		<UserMenu user={data.user} isAdmin={data.isAdmin} />
+		<UserMenu
+			user={data.user}
+			isAdmin={data.isAdmin}
+			bind:isOpen={userMenuOpen}
+			onopen={() => openOnly('user')}
+		/>
 	</HeaderUtilities>
 </Header>
 

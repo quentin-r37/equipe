@@ -9,10 +9,16 @@
 
 	let {
 		user,
-		isAdmin = false
-	}: { user: { name?: string | null; email: string }; isAdmin?: boolean } = $props();
-
-	let isOpen = $state(false);
+		isAdmin = false,
+		isOpen = $bindable(false),
+		onopen = () => {}
+	}: {
+		user: { name?: string | null; email: string };
+		isAdmin?: boolean;
+		/** Bound by the shell so only one header panel is open at a time. */
+		isOpen?: boolean;
+		onopen?: () => void;
+	} = $props();
 
 	const displayName = $derived(user.name || user.email);
 	/** Up to two initials from the display name, falling back to the email's first letter. */
@@ -28,6 +34,7 @@
 
 <HeaderAction
 	bind:isOpen
+	on:open={onopen}
 	icon={UserAvatar}
 	closeIcon={UserAvatar}
 	class="user-menu-trigger"
