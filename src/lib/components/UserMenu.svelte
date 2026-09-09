@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import UserAvatar from 'carbon-icons-svelte/lib/UserAvatar.svelte';
 	import ChevronDown from 'carbon-icons-svelte/lib/ChevronDown.svelte';
+	import UserProfile from 'carbon-icons-svelte/lib/UserProfile.svelte';
 	import Settings from 'carbon-icons-svelte/lib/Settings.svelte';
 	import Logout from 'carbon-icons-svelte/lib/Logout.svelte';
 
@@ -48,6 +49,12 @@
 			</span>
 		</div>
 		<ul class="user-menu__actions">
+			<li>
+				<a href={resolve('/profile')} onclick={() => (isOpen = false)}>
+					<UserProfile size={16} />
+					My profile
+				</a>
+			</li>
 			{#if isAdmin}
 				<li>
 					<a href={resolve('/admin/users')} onclick={() => (isOpen = false)}>
