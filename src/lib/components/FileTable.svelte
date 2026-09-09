@@ -62,7 +62,13 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex (Keyboard users need to scroll the table horizontally.) -->
 <div class="file-table" role="region" aria-label="Files" tabindex="0">
-	<table class="bx--data-table bx--data-table--compact">
+	<!--
+		No `bx--data-table--compact`: the rows below are 3.25rem, not the 1.5rem compact means, so
+		every rule the class brings is already overridden here — except the one that matters,
+		`.bx--data-table--compact .bx--overflow-menu { height: 100% }`, which outranks
+		`--sm` and collapses the row menu to icon height because no ancestor has a resolved height.
+	-->
+	<table class="bx--data-table">
 		<caption class="bx--assistive-text">Shared files</caption>
 		<thead
 			><tr
@@ -185,9 +191,18 @@
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
+		gap: var(--cds-spacing-02);
+	}
+	/*
+	 * Carbon hovers an overflow menu inside a data table with the selected-row grey, much darker
+	 * than the ghost hover of the download button next to it. Both row actions share one hover.
+	 */
+	.file-actions :global(.bx--overflow-menu:hover) {
+		background-color: var(--cds-hover-ui);
 	}
 	.actions-cell {
-		width: 6rem;
+		/* Two 2rem buttons + the gap + the cell padding. */
+		width: 6.5rem;
 		padding: 0 1rem;
 	}
 </style>

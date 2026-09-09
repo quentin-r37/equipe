@@ -6,7 +6,6 @@
 		Header,
 		HeaderUtilities,
 		HeaderAction,
-		HeaderGlobalAction,
 		SideNav,
 		SideNavItems,
 		SideNavMenu,
@@ -19,8 +18,6 @@
 	import Chat from 'carbon-icons-svelte/lib/Chat.svelte';
 	import VideoChat from 'carbon-icons-svelte/lib/VideoChat.svelte';
 	import DocumentMultiple01 from 'carbon-icons-svelte/lib/DocumentMultiple_01.svelte';
-	import Logout from 'carbon-icons-svelte/lib/Logout.svelte';
-	import UserAvatar from 'carbon-icons-svelte/lib/UserAvatar.svelte';
 	import Settings from 'carbon-icons-svelte/lib/Settings.svelte';
 	import ColorPalette from 'carbon-icons-svelte/lib/ColorPalette.svelte';
 	import NotificationIcon from 'carbon-icons-svelte/lib/Notification.svelte';
@@ -30,6 +27,7 @@
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import NotificationPanel from '$lib/components/NotificationPanel.svelte';
 	import MeetingWidget from '$lib/components/MeetingWidget.svelte';
+	import UserMenu from '$lib/components/UserMenu.svelte';
 	import { notificationState } from '$lib/stores/notifications.svelte';
 	import { meetingState } from '$lib/stores/meeting.svelte';
 	import { messageOutbox } from '$lib/stores/messageOutbox.svelte';
@@ -102,24 +100,9 @@
 		<HeaderAction icon={ColorPalette} iconDescription="Theme">
 			<ThemeSelector />
 		</HeaderAction>
-		<HeaderGlobalAction
-			aria-label={data.user.name || data.user.email}
-			iconDescription={data.user.name || data.user.email}
-			icon={UserAvatar}
-		/>
-		<HeaderGlobalAction
-			aria-label="Sign out"
-			iconDescription="Sign out"
-			icon={Logout}
-			onclick={() => {
-				const form = document.getElementById('signout-form') as HTMLFormElement;
-				form?.submit();
-			}}
-		/>
+		<UserMenu user={data.user} isAdmin={data.isAdmin} />
 	</HeaderUtilities>
 </Header>
-
-<form id="signout-form" method="post" action="/?/signOut" style="display:none"></form>
 
 <SideNav bind:isOpen={isSideNavOpen}>
 	<SideNavItems>
