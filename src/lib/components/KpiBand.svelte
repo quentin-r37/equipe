@@ -83,7 +83,7 @@
 	.kpi dt,
 	.kpi-value,
 	.kpi-note {
-		padding: 0 var(--cds-spacing-06);
+		padding: 0 var(--app-surface-padding-inline);
 	}
 	.kpi dt {
 		color: var(--cds-text-secondary);

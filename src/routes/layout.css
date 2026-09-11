@@ -28,11 +28,76 @@
 	 * on small screens, where MeetingWidget collapses into a full-width bottom bar.
 	 */
 	--meeting-dock-height: 0px;
+
+	/* Shared inset for content placed inside page surfaces (cards, bands and banners). */
+	--app-surface-padding-inline: var(--cds-spacing-06);
 }
 
 @media (max-width: 672px) {
+	:root {
+		--app-surface-padding-inline: var(--cds-spacing-05);
+	}
+
 	:root.meeting-docked {
 		--meeting-dock-height: 3.25rem;
+	}
+}
+
+/*
+ * Carbon's v10 modal is fixed at 100vw × 100vh below 42rem and leaves 20% of a
+ * paragraph empty on the right. Give dialogs a viewport gutter, use the dynamic
+ * viewport height on mobile, and let long labels/content wrap without overflowing.
+ */
+@media (max-width: 672px) {
+	.bx--modal {
+		height: 100dvh;
+		padding: max(var(--cds-spacing-04), env(safe-area-inset-top))
+			max(var(--cds-spacing-04), env(safe-area-inset-right))
+			max(var(--cds-spacing-04), env(safe-area-inset-bottom))
+			max(var(--cds-spacing-04), env(safe-area-inset-left));
+	}
+
+	.bx--modal-container,
+	.bx--modal-container--xs,
+	.bx--modal-container--sm,
+	.bx--modal-container--lg {
+		position: static;
+		width: 100%;
+		height: auto;
+		max-height: calc(100dvh - var(--cds-spacing-06));
+	}
+
+	.bx--modal-header {
+		padding-left: var(--app-surface-padding-inline);
+	}
+
+	.bx--modal-content,
+	.bx--modal-content--with-form {
+		margin-bottom: var(--cds-spacing-06);
+		padding-right: var(--app-surface-padding-inline);
+		padding-left: var(--app-surface-padding-inline);
+		overscroll-behavior: contain;
+	}
+
+	.bx--modal-content > p {
+		padding-right: 0;
+	}
+
+	.bx--modal .bx--inline-notification {
+		min-width: 0;
+		max-width: none;
+	}
+
+	.bx--modal-footer,
+	.bx--modal-footer .bx--btn {
+		height: auto;
+		min-height: 4rem;
+	}
+
+	.bx--modal-footer .bx--btn {
+		min-width: 0;
+		padding: var(--cds-spacing-05);
+		white-space: normal;
 	}
 }
 

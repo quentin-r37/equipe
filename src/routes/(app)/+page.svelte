@@ -552,7 +552,7 @@
 	 */
 	.panel {
 		background: var(--cds-ui-01);
-		padding: var(--cds-spacing-05) var(--cds-spacing-06) var(--cds-spacing-06);
+		padding: var(--cds-spacing-05) var(--app-surface-padding-inline) var(--cds-spacing-06);
 	}
 	.dashboard-columns {
 		display: grid;
@@ -599,7 +599,7 @@
 	}
 	.team-card {
 		background: var(--cds-ui-01);
-		padding: var(--cds-spacing-05);
+		padding: var(--cds-spacing-05) var(--app-surface-padding-inline);
 	}
 	.team-header {
 		display: flex;
@@ -783,7 +783,18 @@
 	@media (max-width: 1056px) {
 		.dashboard-columns {
 			grid-template-columns: minmax(0, 1fr);
-			gap: 2rem;
+			gap: var(--cds-spacing-07);
+		}
+	}
+	@media (max-width: 672px) {
+		.dashboard-columns {
+			gap: var(--cds-spacing-05);
+		}
+		.teams-grid {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.section-actions {
+			flex-wrap: wrap;
 		}
 	}
 </style>

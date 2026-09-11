@@ -304,4 +304,26 @@
 		color: var(--cds-text-error);
 		font-size: 0.875rem;
 	}
+
+	@media (max-width: 672px) {
+		.link-item {
+			align-items: stretch;
+			flex-direction: column;
+		}
+
+		.link-info {
+			width: 100%;
+		}
+
+		.link-actions {
+			align-self: flex-end;
+			flex-wrap: wrap;
+			justify-content: flex-end;
+		}
+
+		.share-create :global(.bx--btn) {
+			width: 100%;
+			max-width: none;
+		}
+	}
 </style>

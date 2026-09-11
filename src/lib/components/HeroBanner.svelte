@@ -99,7 +99,7 @@
 		grid-template-columns: minmax(0, 1fr) auto;
 		gap: var(--cds-spacing-06) var(--cds-spacing-07);
 		align-items: start;
-		padding: var(--cds-spacing-07) var(--cds-spacing-06);
+		padding: var(--cds-spacing-07) var(--app-surface-padding-inline);
 		color: var(--hero-fg);
 		background-color: var(--hero-base);
 		background-image:
